@@ -1,6 +1,6 @@
 {
-  "serviceName": "Service name goes here",
-  "useServiceNavigation": true,
+  "serviceName": "CJS Common Platform",
+  "useServiceNavigation": false,
   "plugins": {
     "govuk-frontend": {
       "rebrand": true

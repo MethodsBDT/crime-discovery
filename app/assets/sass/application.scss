@@ -1,6 +1,691 @@
 //
-// For guidance on how to add CSS and SCSS see:
-// https://prototype-kit.service.gov.uk/docs/adding-css-javascript-and-images
-// 
+// CJS Common Platform — bespoke chrome on top of the GOV.UK page template.
+// We use the standard GOV.UK header (rebrand) and footer; everything below
+// is service-specific UI living in `beforeContent` and `content`.
+// All custom rules are namespaced .cps-* so they can be lifted out cleanly.
+//
 
-// Add extra styles here
+// Colour tokens approximated from the Figma. Re-using GOV.UK Frontend
+// colours where they map cleanly; bespoke values for the platform blue strip.
+$cps-blue: #1d70b8;        // matches govuk-colour("blue")
+$cps-blue-dark: #144e81;
+$cps-grey-border: #b1b4b6; // matches govuk-colour("mid-grey")
+$cps-grey-bg: #f3f2f1;     // matches govuk-colour("light-grey")
+$cps-black: #0b0c0c;       // matches govuk-colour("black")
+
+// ---------------------------------------------------------------------------
+// GDS Transport everywhere. The kit's body already sets $govuk-font-family,
+// so most text inherits correctly — but form controls (button, input,
+// select, textarea) don't inherit font-family in any browser. This rule
+// guarantees the GDS Transport stack on every custom .cps-* element,
+// including the buttons/inputs we render ourselves.
+// ---------------------------------------------------------------------------
+[class^="cps-"],
+[class*=" cps-"] {
+  font-family: $govuk-font-family;
+}
+
+// ---------------------------------------------------------------------------
+// Wide content container — releases the standard .govuk-width-container cap
+// so the three-column layout has room. Header keeps its own container,
+// untouched, because this modifier is only applied to the main content's
+// container via `containerClasses`.
+// ---------------------------------------------------------------------------
+.govuk-width-container.cps-container--wide {
+  max-width: none;
+  padding-left: govuk-spacing(6);  // 30px
+  padding-right: govuk-spacing(6); // 30px
+  margin-left: 0;
+  margin-right: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Case summary block — applied as an extra class on a govukInsetText so the
+// left bar, padding and bottom margin come from GOV.UK Frontend. We just
+// add the four-column grid + per-column styling on top.
+//   court + hearing type | total | to complete | completed
+// ---------------------------------------------------------------------------
+.cps-case-summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto auto;
+  align-items: center;
+  gap: govuk-spacing(6);
+
+  // Vertical separators between adjacent columns
+  > * + * {
+    border-left: 1px solid $cps-grey-border;
+    padding-left: govuk-spacing(6);
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  &__details {
+    display: flex;
+    flex-direction: column;
+    gap: govuk-spacing(2);
+    margin: 0;
+  }
+
+  &__field {
+    margin: 0;
+
+    dt {
+      font-size: 16px;
+      color: govuk-colour("black", $variant: "tint-25");
+      margin: 0;
+    }
+
+    dd {
+      font-size: 19px;
+      font-weight: 700;
+      margin: 0;
+    }
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    min-width: 9ch;
+  }
+
+  &__number {
+    font-family: $govuk-font-family;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  &__caption {
+    font-size: 16px;
+    color: govuk-colour("black", $variant: "tint-25");
+  }
+
+  // Status colours on the metric numbers
+  &__stat--total .cps-case-summary__number     { color: govuk-colour("blue"); }
+  &__stat--remaining .cps-case-summary__number { color: govuk-colour("red"); }
+  &__stat--complete .cps-case-summary__number  { color: govuk-colour("green"); }
+}
+
+// Sub-line above the H1 ("Hearing date: 27 April 2026"). Pulled tight to
+// the heading and given muted colour so the heading remains primary.
+.cps-case-summary__date {
+  margin-bottom: govuk-spacing(1);
+  color: govuk-colour("black", $variant: "tint-25");
+}
+
+// ---------------------------------------------------------------------------
+// Collapse / expand toggle in the summary card's actions slot. The chevron
+// points up while the card is expanded ("Collapse"), and rotates 180° when
+// the user collapses it ("Expand").
+// (Currently unused on this page — kept available for any future card that
+// wants the same toggle pattern.)
+// ---------------------------------------------------------------------------
+.cps-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: underline;
+
+  &__chevron {
+    flex: 0 0 auto;
+    transition: transform 0.15s ease-in-out;
+  }
+
+  &--collapsed &__chevron {
+    transform: rotate(180deg);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case banner — full-width blue strip with case ref + defendant name.
+// Sits inside `beforeContent` between the phase banner and the hearing nav.
+// ---------------------------------------------------------------------------
+.cps-case-banner {
+  background: $cps-blue;
+  color: govuk-colour("white");
+  padding: govuk-spacing(2) govuk-spacing(3);
+  margin-top: govuk-spacing(3);
+  margin-bottom: 0;
+  font-family: $govuk-font-family;
+  font-weight: 700;
+  font-size: 19px;
+  display: flex;
+  gap: govuk-spacing(3);
+
+  &__ref { opacity: 0.9; }
+}
+
+// ---------------------------------------------------------------------------
+// Hearing navigation — single row sitting below the case banner.
+// govukBackLink on the far left, then horizontal tabs. The current tab gets
+// a 4px blue underline that overlaps the row's grey rule.
+// ---------------------------------------------------------------------------
+.cps-hearing-nav {
+  display: flex;
+  align-items: stretch;
+  gap: govuk-spacing(5);
+  border-bottom: 1px solid $cps-grey-border;
+  margin: 0 0 govuk-spacing(4);
+  flex-wrap: wrap;
+
+  // Override the GOV.UK back-link's default top/bottom margins so it lines
+  // up with the inline tabs.
+  &__back.govuk-back-link {
+    margin: 0;
+    padding-top: govuk-spacing(2);
+    padding-bottom: govuk-spacing(2);
+    align-self: center;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: govuk-spacing(5);
+    flex-wrap: wrap;
+
+    li { margin: 0; }
+  }
+
+  &__link {
+    display: inline-block;
+    padding: govuk-spacing(2) 0;
+    color: $cps-blue;
+    text-decoration: none;
+    font-size: 16px;
+
+    &:hover { text-decoration: underline; }
+
+    &:focus {
+      outline: 3px solid govuk-colour("yellow");
+      outline-offset: 0;
+    }
+  }
+
+  &__link--current {
+    color: govuk-colour("black");
+    font-weight: 700;
+    border-bottom: 4px solid $cps-blue;
+    margin-bottom: -1px; // overlap the row's grey rule
+
+    &:hover { text-decoration: none; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Three-column results row
+// ---------------------------------------------------------------------------
+.cps-results-row { margin-bottom: govuk-spacing(6); }
+
+.cps-panel {
+  border: 1px solid $cps-grey-border;
+  padding: govuk-spacing(3);
+  background: govuk-colour("white");
+  height: 100%;
+
+  &__heading { margin: 0 0 govuk-spacing(3); }
+}
+
+// ---------------------------------------------------------------------------
+// Defendants picker
+//
+// Each row is a govuk-radios__item (small variant). We override the default
+// padding/positioning so:
+//   • 15px of space between the row's outer edge and the radio
+//   • the small radio (24px) is vertically centred on the row content
+//   • selected rows show a light-blue tint + a 4px blue left bar
+// ---------------------------------------------------------------------------
+$cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
+
+.cps-defendants {
+  &__search {
+    margin-bottom: govuk-spacing(3);
+  }
+
+  &__list {
+    display: block;
+  }
+
+  // Row layout: 15px outer edge → radio (24px) → 10px gap → text → 15px right edge
+  &__item.govuk-radios__item {
+    position: relative;
+    margin: 0;
+    padding: 10px 15px 10px 49px; // left = 15 + 24 (radio) + 10 (gap) = 49
+    min-height: 0;
+    border-bottom: 1px solid $cps-grey-border;
+
+    &:last-child { border-bottom: 0; }
+
+    // Vertically centre the radio cluster (input + custom circle + dot).
+    // govuk-radios uses absolute positioning for these, so we just shift.
+    .govuk-radios__input {
+      top: 50%;
+      left: 15px;
+      transform: translateY(-50%);
+    }
+
+    .govuk-radios__label::before {
+      top: 50%;
+      left: 15px;
+      transform: translateY(-50%);
+    }
+
+    // Inner dot of the small radio is 10px inside a 24px outer ring;
+    // shift left by (24 - 10) / 2 = 7px so it stays centred.
+    .govuk-radios__label::after {
+      top: 50%;
+      left: 22px;
+      transform: translateY(-50%);
+    }
+  }
+
+  &__item--selected {
+    background: $cps-blue-tint;
+    box-shadow: inset 4px 0 0 0 $cps-blue;
+  }
+
+  &__label {
+    display: block;
+    padding: 0;
+    font-weight: normal;
+  }
+
+  &__name {
+    display: block;
+    font-size: 16px;
+  }
+
+  &__progress {
+    display: block;
+    font-size: 14px;
+    color: govuk-colour("black", $variant: "tint-25");
+    margin-top: 2px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Offences — govuk-task-list pattern with custom expand/collapse on each
+// row. Each <li> contains a <button class="cps-offence__toggle"> (the
+// click target spanning the whole header row) and a sibling content div
+// that's hidden when the toggle's aria-expanded is "false".
+// ---------------------------------------------------------------------------
+.cps-offences {
+  // No panel chrome on this column — rows differentiate themselves via
+  // the coloured strip + 8px gaps below.
+  &__heading {
+    margin: 0 0 govuk-spacing(1);
+  }
+
+  &__progress {
+    color: govuk-colour("black", $variant: "tint-25");
+    margin-bottom: govuk-spacing(3);
+  }
+
+  &__list.govuk-task-list {
+    margin-bottom: 0;
+  }
+
+  // Each row is a self-contained block with top + bottom borders, separated
+  // by an 8px gap from the next row. (govuk-task-list only puts a border-top
+  // on the first item by default; we want it on every row.)
+  &__list .govuk-task-list__item {
+    border-top: 1px solid $cps-grey-border;
+    border-bottom: 1px solid $cps-grey-border;
+    margin-bottom: 8px;
+
+    &:last-child { margin-bottom: 0; }
+  }
+}
+
+.cps-offence {
+  // Reset govuk-task-list's flex layout — we use our own button as the
+  // header row and a sibling div for the expanded content.
+  &.govuk-task-list__item {
+    display: block;
+    padding: 0;
+  }
+
+  // Coloured strip down the left side of the whole row (header + content
+  // when expanded). 4px wide, status-coloured.
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+  }
+
+  &--in-progress::before { background: $cps-blue; }
+  &--completed::before   { background: govuk-colour("green"); }
+  &--not-started::before { background: govuk-colour("magenta", $variant: "primary"); }
+
+  // The clickable header row — full width, flex layout: title on the left,
+  // status tag + chevron on the right.
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(3);
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-family: $govuk-font-family;
+    font-size: 19px;
+    font-weight: 700;
+    color: govuk-colour("black");
+    // 28px left padding = 4px strip + 24px gap to first content
+    padding: govuk-spacing(3) govuk-spacing(3) govuk-spacing(3) 28px;
+
+    &:hover {
+      background: $cps-grey-bg;
+    }
+
+    &:focus {
+      outline: 3px solid govuk-colour("yellow");
+      outline-offset: -1px;
+    }
+  }
+
+  &__title {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(2);
+  }
+
+  &__title-text {
+    font-weight: 400;
+  }
+
+  &__status-row {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(3);
+    flex: 0 0 auto;
+  }
+
+  &__chevron {
+    flex: 0 0 auto;
+    transition: transform 0.15s ease-in-out;
+    color: govuk-colour("black", $variant: "tint-25");
+  }
+
+  &__toggle[aria-expanded="true"] &__chevron {
+    transform: rotate(180deg);
+  }
+
+  // Expanded content — same 28px left padding so it aligns under the title.
+  &__content {
+    padding: govuk-spacing(2) govuk-spacing(3) govuk-spacing(4) 28px;
+  }
+
+  // Numbered circle (used on offences that are queued / in progress).
+  &__number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: $cps-blue;
+    color: govuk-colour("white");
+    font-size: 12px;
+    font-weight: 700;
+    flex: 0 0 auto;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Result picker (inside an expanded offence): the typeahead search plus a
+// "Selected case result" panel that toggles between an empty hint and a
+// removable item card.
+// ---------------------------------------------------------------------------
+.cps-result-selected {
+  &__heading {
+    margin-top: govuk-spacing(4);
+    margin-bottom: govuk-spacing(2);
+  }
+
+  // Empty hint — plain muted text, no rules around it.
+  &__empty {
+    color: govuk-colour("black", $variant: "tint-25");
+    margin: 0;
+  }
+
+  // The selected-item card. Use :not([hidden]) so the explicit display:flex
+  // doesn't override the browser default for the [hidden] attribute.
+  &__item {
+    &:not([hidden]) {
+      display: flex;
+    }
+    align-items: center;
+    justify-content: space-between;
+    gap: govuk-spacing(3);
+    padding: govuk-spacing(2) 0;
+    border-top: 1px solid $cps-grey-border;
+    border-bottom: 1px solid $cps-grey-border;
+  }
+
+  &__text {
+    font-weight: 700;
+  }
+
+  &__remove {
+    display: inline-flex;
+    align-items: center;
+    gap: govuk-spacing(1);
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: $govuk-font-family;
+    font-size: 16px;
+    color: govuk-colour("blue");
+    padding: govuk-spacing(1) 0;
+
+    &:hover { text-decoration: underline; }
+
+    &:focus {
+      outline: 3px solid govuk-colour("yellow");
+      outline-offset: 2px;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Right-hand timeline / event log
+// ---------------------------------------------------------------------------
+.cps-timeline {
+  border: 1px solid $cps-grey-border;
+  padding: govuk-spacing(3);
+  background: govuk-colour("white");
+
+  &__shortcut {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: $cps-blue;
+    text-decoration: none;
+    border-bottom: 1px solid $cps-grey-border;
+    padding-bottom: govuk-spacing(2);
+    margin-bottom: govuk-spacing(2);
+    font-size: 16px;
+
+    &:hover { text-decoration: underline; }
+
+    &-arrow { font-size: 20px; }
+  }
+
+  &__tabs {
+    display: flex;
+    border-bottom: 1px solid $cps-grey-border;
+    margin-bottom: govuk-spacing(3);
+  }
+
+  &__tab {
+    background: transparent;
+    border: 0;
+    padding: govuk-spacing(2) govuk-spacing(3);
+    cursor: pointer;
+    font-family: $govuk-font-family;
+    font-size: 16px;
+    color: $cps-blue;
+    border-bottom: 4px solid transparent;
+    margin-bottom: -1px;
+
+    &--active {
+      color: $cps-black;
+      font-weight: 700;
+      border-bottom-color: $cps-black;
+    }
+  }
+
+  &__lead {
+    margin: 0 0 govuk-spacing(1);
+    font-weight: 700;
+  }
+
+  &__sub {
+    margin: 0 0 govuk-spacing(4);
+    color: govuk-colour("black", $variant: "tint-25");
+  }
+
+  &__heading {
+    font-size: 16px;
+    color: govuk-colour("black", $variant: "tint-25");
+    border-top: 1px solid $cps-grey-border;
+    padding-top: govuk-spacing(2);
+    margin: 0 0 govuk-spacing(2);
+  }
+
+  &__events {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  // Each event is a summary card; the visual chrome comes from
+  // .govuk-summary-card. The <li> just provides spacing and the
+  // connector line down to the next card.
+  &__event {
+    position: relative;
+    margin-bottom: govuk-spacing(4);
+
+    &:last-child { margin-bottom: 0; }
+
+    // 2px grey vertical line in the gap between adjacent cards.
+    &:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 25px;
+      bottom: -#{govuk-spacing(4)};
+      width: 2px;
+      height: govuk-spacing(4);
+      background: $cps-grey-border;
+    }
+  }
+
+  &__event-title {
+    font-weight: 700;
+    margin: 0 0 govuk-spacing(2);
+  }
+
+  &__event-meta {
+    font-size: 14px;
+    color: govuk-colour("black", $variant: "tint-25");
+    margin: 0 0 govuk-spacing(2);
+    line-height: 1.4;
+  }
+
+  &__event-link { margin: 0; }
+
+  // ---------------------------------------------------------------------------
+  // Tab panels — only one is visible at a time (others have [hidden]).
+  // ---------------------------------------------------------------------------
+  &__panel {
+    margin-top: govuk-spacing(2);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Event log panel — actions row at the top, heading + Add witness on a
+// split row, search box, list of timestamped events with a Change link,
+// then two stacked secondary "Download" buttons at the bottom.
+// ---------------------------------------------------------------------------
+.cps-event-log {
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(2);
+    margin: 0 0 govuk-spacing(3);
+    flex-wrap: wrap;
+  }
+
+  &__sep {
+    color: $cps-grey-border;
+  }
+
+  &__action--disabled {
+    color: govuk-colour("black", $variant: "tint-25");
+  }
+
+  &__heading-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: govuk-spacing(2);
+    margin-bottom: govuk-spacing(2);
+  }
+
+  &__heading {
+    margin: 0;
+  }
+
+  &__search {
+    margin-bottom: govuk-spacing(3);
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0 0 govuk-spacing(4);
+    padding: 0;
+  }
+
+  // Each row: title flexes to fill, time + Change sit on the right.
+  &__item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: govuk-spacing(3);
+    align-items: start;
+    padding: govuk-spacing(2) 0;
+    border-bottom: 1px solid $cps-grey-border;
+    font-size: 16px;
+
+    &:last-child { border-bottom: 0; }
+  }
+
+  &__time {
+    color: govuk-colour("black", $variant: "tint-25");
+    white-space: nowrap;
+  }
+
+  &__downloads {
+    display: flex;
+    flex-direction: column;
+    gap: govuk-spacing(2);
+    align-items: stretch;
+  }
+
+  // Full-width secondary buttons inside the narrow sidebar column.
+  &__download.govuk-button {
+    width: 100%;
+    margin: 0;
+  }
+}
+

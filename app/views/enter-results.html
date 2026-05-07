@@ -1,0 +1,517 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/accordion/macro.njk" import govukAccordion %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = "Enter results" %}
+
+{# Release the standard 960px content cap so the three-column area has
+   room to breathe. Only affects the main content's width container —
+   the GOV.UK header keeps its own (untouched) container. #}
+{% set containerClasses = "cps-container--wide" %}
+
+{# Pull in accessible-autocomplete — the GDS-recommended typeahead — from
+   CDN so we don't need an npm install for the prototype. #}
+{% block stylesheets %}
+  {{ super() }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/accessible-autocomplete@2.0.4/dist/accessible-autocomplete.min.css">
+{% endblock %}
+
+{% block pageScripts %}
+  <script src="https://cdn.jsdelivr.net/npm/accessible-autocomplete@2.0.4/dist/accessible-autocomplete.min.js"></script>
+  <script>
+    // Each .cps-result-picker has a <select> that gets enhanced into an
+    // accessible-autocomplete, plus a "Selected case result" display below
+    // with an empty hint and a removable selected-item card.
+    function setupResultPicker (picker) {
+      var select = picker.querySelector('select.cps-result-search')
+      if (!select) return
+
+      var emptyHint    = picker.querySelector('.cps-result-selected__empty')
+      var selectedItem = picker.querySelector('.cps-result-selected__item')
+      var selectedText = picker.querySelector('.cps-result-selected__text')
+      var removeBtn    = picker.querySelector('.cps-result-selected__remove')
+
+      function showSelected (label) {
+        selectedText.textContent = label
+        selectedItem.hidden = false
+        emptyHint.hidden = true
+      }
+
+      function clearSelection () {
+        select.value = ''
+        selectedText.textContent = ''
+        selectedItem.hidden = true
+        emptyHint.hidden = false
+        var input = picker.querySelector('.autocomplete__input')
+        if (input) {
+          input.value = ''
+          input.focus()
+        }
+      }
+
+      removeBtn.addEventListener('click', clearSelection)
+
+      // If the page was rendered with a pre-selected option, mirror that
+      // into the selected-result card on load.
+      if (select.value) {
+        var preselected = select.options[select.selectedIndex]
+        if (preselected) showSelected(preselected.text)
+      }
+
+      // Enhance into accessible-autocomplete and listen for confirmation.
+      window.accessibleAutocomplete.enhanceSelectElement({
+        selectElement: select,
+        showAllValues: false,
+        defaultValue: '',
+        displayMenu: 'overlay',
+        onConfirm: function (label) {
+          if (!label) return
+          // After a confirm, the underlying select.value reflects the
+          // matching option's value; find the option to display its label.
+          var option = Array.prototype.find.call(select.options, function (opt) {
+            return opt.text === label
+          })
+          if (!option) return
+          select.value = option.value
+          showSelected(option.text)
+          // Clear the visible autocomplete input on the next tick so the
+          // library doesn't immediately re-paint our cleared value.
+          setTimeout(function () {
+            var input = picker.querySelector('.autocomplete__input')
+            if (input) input.value = ''
+          }, 0)
+        }
+      })
+    }
+
+    document.querySelectorAll('.cps-result-picker').forEach(setupResultPicker)
+  </script>
+{% endblock %}
+
+{#
+  Use the standard GOV.UK page template (header + main + footer) with the
+  June 2025 rebrand. The kit picks up `plugins.govuk-frontend.rebrand: true`
+  from app/config.json and exposes it as `govukRebrand`, which the standard
+  header/footer macros use to render the Tudor crown and refreshed brand.
+
+  We override only the `govukServiceNavigation` block so the hearing tabs
+  (Manage hearing / Enter pleas / Enter verdicts / Enter results) appear in
+  the service-nav strip below the GOV.UK header. Everything HMCTS-specific
+  (case banner, summary card, defendants, offences, timeline) lives in
+  `beforeContent` and `content` as service UI within the standard template.
+#}
+
+{# Empty out the standard service-navigation strip — the per-page tabs sit
+   below the case banner now (see beforeContent below). #}
+{% block govukServiceNavigation %}{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: "This is a new service"
+  }) }}
+
+  {# HMCTS-specific blue case banner — bespoke chrome #}
+  <div class="cps-case-banner">
+    <span class="cps-case-banner__ref">RQ387429703</span>
+    <span class="cps-case-banner__name">Darius KONOPELSKI</span>
+  </div>
+
+  {# Hearing-level tabs. The govukBackLink renders with its own chevron and
+     underline; the rest of the row is a custom inline list with the current
+     page underlined. #}
+  <nav class="cps-hearing-nav" aria-label="Hearing navigation">
+    {{ govukBackLink({
+      text: "Back to hearing list",
+      href: "#",
+      classes: "cps-hearing-nav__back"
+    }) }}
+    <ul class="cps-hearing-nav__list">
+      <li><a class="cps-hearing-nav__link" href="#">Manage hearing</a></li>
+      <li><a class="cps-hearing-nav__link" href="#">Enter pleas</a></li>
+      <li><a class="cps-hearing-nav__link" href="#">Enter verdicts</a></li>
+      <li><a class="cps-hearing-nav__link cps-hearing-nav__link--current" href="#" aria-current="page">Enter results</a></li>
+    </ul>
+  </nav>
+{% endblock %}
+
+{% block content %}
+  <p class="govuk-body cps-case-summary__date">Hearing date: 27 April 2026</p>
+  <h1 class="govuk-heading-xl">Enter results for case number 01XYZ4580</h1>
+
+  {#
+    Case-summary block: court / hearing type on the left, then three big
+    metrics — Offences (blue), Offences to complete (red), Offences
+    completed (green). Wrapped in the standard `govukInsetText` component
+    so the left bar, padding and margin all come from GOV.UK Frontend.
+  #}
+  {% set caseSummaryHtml %}
+    <dl class="cps-case-summary__details">
+      <div class="cps-case-summary__field">
+        <dt>Court</dt>
+        <dd>Cardiff Magistrates&rsquo; Court</dd>
+      </div>
+      <div class="cps-case-summary__field">
+        <dt>Hearing type</dt>
+        <dd>Trial / sentencing</dd>
+      </div>
+    </dl>
+
+    <div class="cps-case-summary__stat cps-case-summary__stat--total">
+      <span class="cps-case-summary__number">10</span>
+      <span class="cps-case-summary__caption">Offences</span>
+    </div>
+    <div class="cps-case-summary__stat cps-case-summary__stat--remaining">
+      <span class="cps-case-summary__number">9</span>
+      <span class="cps-case-summary__caption">Offences to complete</span>
+    </div>
+    <div class="cps-case-summary__stat cps-case-summary__stat--complete">
+      <span class="cps-case-summary__number">1</span>
+      <span class="cps-case-summary__caption">Offences completed</span>
+    </div>
+  {% endset %}
+
+  {{ govukInsetText({
+    html: caseSummaryHtml,
+    classes: "cps-case-summary",
+    attributes: { "aria-label": "Case summary" }
+  }) }}
+
+  {#
+    Catalogue of hearing results. Powers the typeahead inside each expanded
+    offence row. Real product data would come from a backend lookup.
+  #}
+  {% set resultsCatalogue = [
+    { code: 'FINE',  name: 'Fine' },
+    { code: 'CD',    name: 'Conditional discharge' },
+    { code: 'AD',    name: 'Absolute discharge' },
+    { code: 'IMP',   name: 'Imprisonment' },
+    { code: 'SS',    name: 'Suspended sentence' },
+    { code: 'CO',    name: 'Community order' },
+    { code: 'COMP',  name: 'Compensation order' },
+    { code: 'COSTS', name: 'Costs ordered' },
+    { code: 'ACQ',   name: 'Acquittal' },
+    { code: 'WD',    name: 'Withdrawn' },
+    { code: 'ADJ',   name: 'Adjourned for sentence' },
+    { code: 'NCTA',  name: 'No case to answer' },
+    { code: 'BO',    name: 'Bound over to keep the peace' },
+    { code: 'DIS',   name: 'Dismissed' },
+    { code: 'DDQ',   name: 'Driving disqualification' }
+  ] %}
+
+  {#
+    Defendants and their offences. Each defendant's offence list is rendered
+    pre-emptively in the centre column; JS toggles visibility on radio
+    selection so there's no round-trip to the server.
+  #}
+  {% set defendants = [
+    {
+      id: 'dayle', first: 'Michael', last: 'DAYLE', complete: 0,
+      offences: [
+        { title: 'Driving without due care and attention',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+        { title: 'Driving with no insurance',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+      ]
+    },
+    {
+      id: 'green', first: 'Tony', last: 'GREEN', complete: 0,
+      offences: [
+        { title: 'Possession of an offensive weapon in a public place',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+        { title: 'Threatening behaviour',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+      ]
+    },
+    {
+      id: 'mann', first: 'Timmy', last: 'MANN', selected: true, complete: 1,
+      offences: [
+        { title: 'Fail / refuse give assistance to person executing Communications Act search warrant',
+          status: 'In progress', statusClass: 'govuk-tag--blue', statusModifier: 'in-progress',
+          number: 1, expanded: true, value: '' },
+        { title: 'Possession of prohibited communication device',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+        { title: 'Obstructing officer',
+          status: 'Completed',    statusClass: 'govuk-tag--green', statusModifier: 'completed' },
+        { title: 'Another offence',
+          status: 'Not started',  statusClass: 'govuk-tag--grey',  statusModifier: 'not-started' }
+      ]
+    },
+    {
+      id: 'norton', first: 'Lisa', last: 'NORTON', complete: 0,
+      offences: [
+        { title: 'Theft from a shop',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+        { title: 'Failing to surrender to custody',
+          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+      ]
+    }
+  ] %}
+
+  {# Three-column layout: defendants picker | offences | timeline. #}
+  <div class="govuk-grid-row cps-results-row">
+
+    {# ---------- Left: defendants picker ---------- #}
+    <div class="govuk-grid-column-one-quarter">
+      <section class="cps-panel cps-defendants" aria-label="Defendants">
+        <h2 class="govuk-heading-s cps-panel__heading">Defendants (4)</h2>
+
+        <div class="cps-defendants__search govuk-form-group">
+          <label class="govuk-label" for="defendant-search">Search defendants</label>
+          <input class="govuk-input" id="defendant-search" name="defendant-search" type="search">
+        </div>
+
+        <form action="/enter-results" method="post" novalidate>
+          <div class="govuk-radios govuk-radios--small cps-defendants__list" data-module="govuk-radios">
+            {% for d in defendants %}
+              <div class="govuk-radios__item cps-defendants__item{% if d.selected %} cps-defendants__item--selected{% endif %}">
+                <input class="govuk-radios__input" id="defendant-{{ d.id }}" name="defendant" type="radio" value="{{ d.id }}"{% if d.selected %} checked{% endif %}>
+                <label class="govuk-label govuk-radios__label cps-defendants__label" for="defendant-{{ d.id }}">
+                  <span class="cps-defendants__name"><strong>{{ d.last }}</strong>, {{ d.first }}</span>
+                  <span class="cps-defendants__progress">({{ d.complete }} of {{ d.offences | length }} offences complete)</span>
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+        </form>
+      </section>
+    </div>
+
+    {# ---------- Centre: offences accordion ----------
+       One panel per defendant, all rendered up front. JS toggles `hidden`
+       on the wrappers so switching defendants is instant. #}
+    <div class="govuk-grid-column-one-half">
+      {% for d in defendants %}
+        <section class="cps-offences"
+                 data-defendant-panel="{{ d.id }}"
+                 aria-label="Offences for {{ d.first }} {{ d.last }}"
+                 {% if not d.selected %}hidden{% endif %}>
+          <h2 class="govuk-heading-m cps-offences__heading">{{ d.last }}, {{ d.first }}</h2>
+          <p class="govuk-body cps-offences__progress">{{ d.complete }} of {{ d.offences | length }} offences completed</p>
+
+          {# Task-list pattern with custom expand/collapse on each row.
+             Click anywhere on the row toggles aria-expanded on the button;
+             JS shows/hides the sibling .cps-offence__content and the
+             chevron rotates 180° via CSS. #}
+          <ul class="govuk-task-list cps-offences__list">
+            {% for o in d.offences %}
+              {% set offenceId = 'offence-' + d.id + '-' + loop.index | string %}
+              <li class="govuk-task-list__item cps-offence cps-offence--{{ o.statusModifier }}">
+                <button type="button"
+                        class="cps-offence__toggle"
+                        aria-expanded="{{ 'true' if o.expanded else 'false' }}"
+                        aria-controls="{{ offenceId }}-content">
+                  <span class="cps-offence__title">
+                    {% if o.number %}<span class="cps-offence__number" aria-hidden="true">{{ o.number }}</span>{% endif %}
+                    <span class="cps-offence__title-text">{{ o.title }}</span>
+                  </span>
+                  <span class="cps-offence__status-row">
+                    {{ govukTag({ text: o.status, classes: o.statusClass }) }}
+                    <svg class="cps-offence__chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </button>
+
+                <div class="cps-offence__content" id="{{ offenceId }}-content"{% if not o.expanded %} hidden{% endif %}>
+                  {% if o.expanded %}
+                    <div class="cps-result-picker">
+                      <div class="govuk-form-group">
+                        <label class="govuk-label govuk-label--s" for="{{ offenceId }}-result">
+                          What is the result of the case?
+                        </label>
+                        <div id="{{ offenceId }}-result-hint" class="govuk-hint">
+                          Start typing to search for a type of result using the code or word
+                        </div>
+                        {# Enhanced into an accessible-autocomplete on page load.
+                           Falls back to a native <select> if JS is disabled. #}
+                        <select class="govuk-select cps-result-search"
+                                id="{{ offenceId }}-result"
+                                name="{{ offenceId }}-result"
+                                aria-describedby="{{ offenceId }}-result-hint">
+                          <option value=""></option>
+                          {% for r in resultsCatalogue %}
+                            <option value="{{ r.code }}"{% if r.code == o.value %} selected{% endif %}>{{ r.code }} — {{ r.name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+
+                      <h3 class="govuk-heading-s cps-result-selected__heading">Selected case result:</h3>
+                      <div class="cps-result-selected">
+                        <p class="cps-result-selected__empty govuk-body">None recorded, select a case result above</p>
+                        <div class="cps-result-selected__item" hidden>
+                          <span class="cps-result-selected__text"></span>
+                          <button type="button" class="cps-result-selected__remove" aria-label="Remove selected case result">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  {% elif o.status == 'Completed' %}
+                    <p class="govuk-body">Result entered.</p>
+                  {% else %}
+                    <p class="govuk-body">No result entered yet.</p>
+                  {% endif %}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+    </div>
+
+    {# ---------- Right: sidebar with tabbed Event log / Reference / Timeline ---------- #}
+    <div class="govuk-grid-column-one-quarter">
+      {% set eventLog = [
+        { title: 'Hearing ended',                              time: '10:41' },
+        { title: 'Judge ruling: Contempt of court',            time: '10:40' },
+        { title: 'Prosecution addresses Judge',                time: '10:40' },
+        { title: 'Defendant Alfonzo Bednar questioned by Judge', time: '10:37' },
+        { title: 'Hearing started',                            time: '10:37' }
+      ] %}
+
+      <aside class="cps-timeline" aria-label="Hearing sidebar">
+        <a href="#" class="cps-timeline__shortcut">
+          Effectiveness / Cracked / Vacated
+          <span class="cps-timeline__shortcut-arrow" aria-hidden="true">&rsaquo;</span>
+        </a>
+
+        <div class="cps-timeline__tabs" role="tablist">
+          <button class="cps-timeline__tab cps-timeline__tab--active"
+                  type="button" role="tab"
+                  id="cps-tab-event-log"
+                  aria-selected="true"
+                  aria-controls="cps-panel-event-log"
+                  data-cps-tab="event-log">Event log</button>
+          <button class="cps-timeline__tab"
+                  type="button" role="tab"
+                  id="cps-tab-reference"
+                  aria-selected="false"
+                  aria-controls="cps-panel-reference"
+                  data-cps-tab="reference">Reference</button>
+          <button class="cps-timeline__tab"
+                  type="button" role="tab"
+                  id="cps-tab-timeline"
+                  aria-selected="false"
+                  aria-controls="cps-panel-timeline"
+                  data-cps-tab="timeline">Timeline</button>
+        </div>
+
+        {# ---- Event log panel ---- #}
+        <section class="cps-timeline__panel cps-event-log"
+                 id="cps-panel-event-log"
+                 role="tabpanel"
+                 aria-labelledby="cps-tab-event-log">
+
+          <p class="cps-event-log__actions">
+            <a href="#" class="govuk-link">Pause</a>
+            <span class="cps-event-log__sep" aria-hidden="true">|</span>
+            <a href="#" class="govuk-link">Resume</a>
+            <span class="cps-event-log__sep" aria-hidden="true">|</span>
+            <span class="cps-event-log__action--disabled">End hearing</span>
+          </p>
+
+          <div class="cps-event-log__heading-row">
+            <h3 class="govuk-heading-s cps-event-log__heading">Event log</h3>
+            <a href="#" class="govuk-link">Add witness</a>
+          </div>
+
+          <div class="govuk-form-group cps-event-log__search">
+            <label class="govuk-visually-hidden" for="event-search">Search event log</label>
+            <input class="govuk-input" id="event-search" name="event-search" type="search">
+          </div>
+
+          <ol class="cps-event-log__list">
+            {% for e in eventLog %}
+              <li class="cps-event-log__item">
+                <span class="cps-event-log__title">{{ e.title }}</span>
+                <span class="cps-event-log__time">{{ e.time }}</span>
+                <a href="#" class="govuk-link cps-event-log__change">Change</a>
+              </li>
+            {% endfor %}
+          </ol>
+
+          <div class="cps-event-log__downloads">
+            <button type="button" class="govuk-button govuk-button--secondary cps-event-log__download" data-module="govuk-button">
+              Download today&rsquo;s event log
+            </button>
+            <button type="button" class="govuk-button govuk-button--secondary cps-event-log__download" data-module="govuk-button">
+              Download full event log
+            </button>
+          </div>
+        </section>
+
+        {# ---- Reference panel (placeholder) ---- #}
+        <section class="cps-timeline__panel"
+                 id="cps-panel-reference"
+                 role="tabpanel"
+                 aria-labelledby="cps-tab-reference"
+                 hidden>
+          <p class="govuk-body">Reference content for this hearing.</p>
+        </section>
+
+        {# ---- Timeline panel ---- #}
+        <section class="cps-timeline__panel"
+                 id="cps-panel-timeline"
+                 role="tabpanel"
+                 aria-labelledby="cps-tab-timeline"
+                 hidden>
+          <h3 class="cps-timeline__heading">Timeline</h3>
+
+          {# Each event is wrapped in govuk-summary-card for the visual chrome
+             (rounded corners + grey title bar). The date sits in the title;
+             everything else sits in the content area. A CSS pseudo-element
+             on the <li> draws a 2px connector line between cards. #}
+          {% set timelineEvents = [
+            {
+              date: '27 Apr 2026',
+              title: 'Mention - All Parties to Attend',
+              location: 'Lavender Hill Magistrates&rsquo; Court, Courtroom 01, 10:00 AM',
+              duration: 'Estimated duration: 10 minutes',
+              person: 'Hank Hermiston',
+              note: 'Remanded in Custody. Previous bail conditions broken.'
+            },
+            {
+              date: '06 Mar 2025',
+              title: 'Bail Variation Application',
+              location: 'Lavender Hill Magistrates&rsquo; Court, Courtroom 01, 10:00 AM',
+              duration: 'Estimated duration: 1 minute',
+              person: 'Hank Hermiston',
+              note: 'Conditional Bail Granted.'
+            }
+          ] %}
+
+          <ol class="cps-timeline__events">
+            {% for ev in timelineEvents %}
+              <li class="cps-timeline__event">
+                <div class="govuk-summary-card">
+                  <div class="govuk-summary-card__title-wrapper">
+                    <h4 class="govuk-summary-card__title">{{ ev.date }}</h4>
+                  </div>
+                  <div class="govuk-summary-card__content">
+                    <p class="cps-timeline__event-title">{{ ev.title }}</p>
+                    <p class="cps-timeline__event-meta">
+                      {{ ev.location | safe }}<br>
+                      {{ ev.duration }}
+                    </p>
+                    <p class="cps-timeline__event-meta">
+                      <strong>{{ ev.person }}</strong><br>
+                      {{ ev.note }}
+                    </p>
+                    <p class="cps-timeline__event-link">
+                      <a href="#" class="govuk-link">Manage hearing</a>
+                    </p>
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ol>
+        </section>
+      </aside>
+    </div>
+  </div>
+{% endblock %}

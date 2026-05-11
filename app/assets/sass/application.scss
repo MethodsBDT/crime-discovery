@@ -471,6 +471,16 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
 }
 
 // ---------------------------------------------------------------------------
+// Typeahead dropdown — cap the height so long matches scroll inside the
+// menu rather than pushing the page around. Roughly 9 visible rows at
+// the library's default option height.
+// ---------------------------------------------------------------------------
+.autocomplete__menu {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+// ---------------------------------------------------------------------------
 // Result picker (inside an expanded offence): the typeahead search plus a
 // "Selected case result" panel that toggles between an empty hint and a
 // removable item card.

@@ -35,6 +35,54 @@ window.GOVUKPrototypeKit.documentReady(() => {
   })
 
   // ---------------------------------------------------------------------------
+  // Case notes — Save button prepends a new note to the list so it appears
+  // immediately below the textarea + button. Date formatted as
+  // "DD Mon YYYY, HH:MM"; author is hardcoded as "You" for the prototype.
+  // ---------------------------------------------------------------------------
+  const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  function formatNoteDate (d) {
+    const dd = String(d.getDate()).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${dd} ${monthShort[d.getMonth()]} ${yyyy}, ${hh}:${mm}`
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.cps-case-notes__save')) return
+
+    const textarea = document.getElementById('new-note')
+    const list = document.getElementById('case-notes-list')
+    if (!textarea || !list) return
+
+    const value = textarea.value.trim()
+    if (!value) return
+
+    const li = document.createElement('li')
+    li.className = 'cps-case-notes__item'
+
+    const author = document.createElement('p')
+    author.className = 'cps-case-notes__author'
+    author.textContent = 'You'
+
+    const text = document.createElement('p')
+    text.className = 'cps-case-notes__text'
+    text.textContent = value
+
+    const time = document.createElement('p')
+    time.className = 'cps-case-notes__time'
+    time.textContent = formatNoteDate(new Date())
+
+    li.appendChild(author)
+    li.appendChild(text)
+    li.appendChild(time)
+
+    list.insertBefore(li, list.firstChild)
+    textarea.value = ''
+    textarea.focus()
+  })
+
+  // ---------------------------------------------------------------------------
   // Sidebar tabs. Each tab is <button data-cps-tab="..."> with aria-controls
   // pointing at a <section role="tabpanel">. Clicking switches which panel is
   // visible — the others get `hidden` and aria-selected="false".

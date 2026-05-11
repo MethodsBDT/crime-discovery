@@ -6,6 +6,7 @@
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/accordion/macro.njk" import govukAccordion %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
 
 {% set pageName = "Enter results" %}
 
@@ -35,11 +36,13 @@
       var selectedItem = picker.querySelector('.cps-result-selected__item')
       var selectedText = picker.querySelector('.cps-result-selected__text')
       var removeBtn    = picker.querySelector('.cps-result-selected__remove')
+      var applyBtn     = picker.querySelector('.cps-result-selected__apply')
 
       function showSelected (label) {
         selectedText.textContent = label
         selectedItem.hidden = false
         emptyHint.hidden = true
+        if (applyBtn) applyBtn.disabled = false
       }
 
       function clearSelection () {
@@ -47,6 +50,7 @@
         selectedText.textContent = ''
         selectedItem.hidden = true
         emptyHint.hidden = false
+        if (applyBtn) applyBtn.disabled = true
         var input = picker.querySelector('.autocomplete__input')
         if (input) {
           input.value = ''
@@ -142,7 +146,7 @@
 
 {% block content %}
   <p class="govuk-body cps-case-summary__date">Hearing date: 27 April 2026</p>
-  <h1 class="govuk-heading-xl">Enter results for case number 01XYZ4580</h1>
+  <h1 class="govuk-heading-xl">Enter results for hearing 01XYZ</h1>
 
   {#
     Case-summary block: court / hearing type on the left, then three big
@@ -154,7 +158,7 @@
     <dl class="cps-case-summary__details">
       <div class="cps-case-summary__field">
         <dt>Court</dt>
-        <dd>Cardiff Magistrates&rsquo; Court</dd>
+        <dd>Cardiff Magistrates&rsquo; Court room number 4</dd>
       </div>
       <div class="cps-case-summary__field">
         <dt>Hearing type</dt>
@@ -211,43 +215,71 @@
   #}
   {% set defendants = [
     {
-      id: 'dayle', first: 'Michael', last: 'DAYLE', complete: 0,
+      id: 'dayle', first: 'Michael', last: 'DAYLE', urn: 'URN1234563347', complete: 0,
+      details: {
+        address: '14 Oakwood Lane, Tooting Bec, London, SW17 0TH',
+        ageDob: '34 years old (5 February 1991)',
+        nationality: 'British',
+        arrestSummons: '1438927461',
+        relatedCases: ['TVLMD55678901', 'TVLMINE12345678']
+      },
       offences: [
-        { title: 'Driving without due care and attention',
+        { code: 'RT88001', title: 'Driving without due care and attention',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { title: 'Driving with no insurance',
+        { code: 'RT89102', title: 'Driving with no insurance',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
       ]
     },
     {
-      id: 'green', first: 'Tony', last: 'GREEN', complete: 0,
+      id: 'green', first: 'Tony', last: 'GREEN', urn: 'URN1234563347', complete: 0,
+      details: {
+        address: '88 Maple Road, Catford, London, SE6 3QE',
+        ageDob: '41 years old (12 November 1983)',
+        nationality: 'British',
+        arrestSummons: '1872134509',
+        relatedCases: ['TVLMINE83920184', 'TVLMD64129883', 'TVLMD27384910']
+      },
       offences: [
-        { title: 'Possession of an offensive weapon in a public place',
+        { code: 'OW20015', title: 'Possession of an offensive weapon in a public place',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { title: 'Threatening behaviour',
+        { code: 'PO11001', title: 'Threatening behaviour',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
       ]
     },
     {
-      id: 'mann', first: 'Timmy', last: 'MANN', selected: true, complete: 1,
+      id: 'mann', first: 'Timmy', last: 'MANN', urn: 'URN1234563347', selected: true, complete: 1,
+      details: {
+        address: 'Flat 1, Armageddon House, 15 Regent Street, Giggleswick, Merton, London, SW11 5TQ',
+        ageDob: '27 years old (17 October 1998)',
+        nationality: 'British',
+        arrestSummons: '1253698532',
+        relatedCases: ['TVLMD72524060', 'TVLMD32228753', 'TVLMINE77958164', 'TVLMD21829874', 'TVLMINE29456495']
+      },
       offences: [
-        { title: 'Fail / refuse give assistance to person executing Communications Act search warrant',
+        { code: 'CA03011', title: 'Fail / refuse give assistance to person executing Communications Act search warrant',
           status: 'In progress', statusClass: 'govuk-tag--blue', statusModifier: 'in-progress',
-          number: 1, expanded: true, value: '' },
-        { title: 'Possession of prohibited communication device',
+          expanded: true, value: '' },
+        { code: 'CA56403', title: 'Possession of prohibited communication device',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { title: 'Obstructing officer',
+        { code: 'PJ9012',  title: 'Obstructing officer',
           status: 'Completed',    statusClass: 'govuk-tag--green', statusModifier: 'completed' },
-        { title: 'Another offence',
+        { code: 'GE00012', title: 'Another offence',
           status: 'Not started',  statusClass: 'govuk-tag--grey',  statusModifier: 'not-started' }
       ]
     },
     {
-      id: 'norton', first: 'Lisa', last: 'NORTON', complete: 0,
+      id: 'norton', first: 'Lisa', last: 'NORTON', urn: 'URN1234563347', complete: 0,
+      details: {
+        address: '7 Beechwood Court, Croydon, Surrey, CR0 6JL',
+        ageDob: '29 years old (3 March 1996)',
+        nationality: 'British',
+        arrestSummons: '1564738291',
+        relatedCases: ['TVLMD81029384', 'TVLMINE56473829']
+      },
       offences: [
-        { title: 'Theft from a shop',
+        { code: 'TH15101', title: 'Theft from a shop',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { title: 'Failing to surrender to custody',
+        { code: 'BA20005', title: 'Failing to surrender to custody',
           status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
       ]
     }
@@ -273,6 +305,7 @@
                 <input class="govuk-radios__input" id="defendant-{{ d.id }}" name="defendant" type="radio" value="{{ d.id }}"{% if d.selected %} checked{% endif %}>
                 <label class="govuk-label govuk-radios__label cps-defendants__label" for="defendant-{{ d.id }}">
                   <span class="cps-defendants__name"><strong>{{ d.last }}</strong>, {{ d.first }}</span>
+                  <span class="cps-defendants__urn">{{ d.urn }}</span>
                   <span class="cps-defendants__progress">({{ d.complete }} of {{ d.offences | length }} offences complete)</span>
                 </label>
               </div>
@@ -291,8 +324,36 @@
                  data-defendant-panel="{{ d.id }}"
                  aria-label="Offences for {{ d.first }} {{ d.last }}"
                  {% if not d.selected %}hidden{% endif %}>
-          <h2 class="govuk-heading-m cps-offences__heading">{{ d.last }}, {{ d.first }}</h2>
+          <h2 class="govuk-heading-m cps-offences__heading">
+            <a href="#" class="govuk-link">{{ d.last }}, {{ d.first }}</a>
+          </h2>
           <p class="govuk-body cps-offences__progress">{{ d.complete }} of {{ d.offences | length }} offences completed</p>
+
+          {# "Defendant information" disclosure — pre-populated with dummy
+             personal data per defendant. #}
+          {% set defendantInfoHtml %}
+            <dl class="cps-defendant-info">
+              <dt>Address</dt>
+              <dd>{{ d.details.address }}</dd>
+              <dt>Age (DOB)</dt>
+              <dd>{{ d.details.ageDob }}</dd>
+              <dt>Nationality</dt>
+              <dd>{{ d.details.nationality }}</dd>
+              <dt>Arrest summons number</dt>
+              <dd>{{ d.details.arrestSummons }}</dd>
+              <dt>Related cases</dt>
+              <dd>
+                {% for c in d.details.relatedCases -%}
+                  <a href="#" class="govuk-link">{{ c }}</a>{% if not loop.last %}, {% endif %}
+                {%- endfor %}
+              </dd>
+            </dl>
+          {% endset %}
+
+          {{ govukDetails({
+            summaryText: "Defendant information",
+            html: defendantInfoHtml
+          }) }}
 
           {# Task-list pattern with custom expand/collapse on each row.
              Click anywhere on the row toggles aria-expanded on the button;
@@ -307,8 +368,10 @@
                         aria-expanded="{{ 'true' if o.expanded else 'false' }}"
                         aria-controls="{{ offenceId }}-content">
                   <span class="cps-offence__title">
-                    {% if o.number %}<span class="cps-offence__number" aria-hidden="true">{{ o.number }}</span>{% endif %}
-                    <span class="cps-offence__title-text">{{ o.title }}</span>
+                    <span class="cps-offence__number" aria-hidden="true">{{ loop.index }}</span>
+                    <span class="cps-offence__text">
+                      <span class="cps-offence__title-text">{{ o.title }}</span>
+                    </span>
                   </span>
                   <span class="cps-offence__status-row">
                     {{ govukTag({ text: o.status, classes: o.statusClass }) }}
@@ -321,7 +384,7 @@
                     <div class="cps-result-picker">
                       <div class="govuk-form-group">
                         <label class="govuk-label govuk-label--s" for="{{ offenceId }}-result">
-                          What is the result of the case?
+                          What is the result of the offence?
                         </label>
                         <div id="{{ offenceId }}-result-hint" class="govuk-hint">
                           Start typing to search for a type of result using the code or word
@@ -349,6 +412,9 @@
                             Remove
                           </button>
                         </div>
+                        <button type="button" class="govuk-button cps-result-selected__apply" data-module="govuk-button" disabled>
+                          Apply to other offences
+                        </button>
                       </div>
                     </div>
                   {% elif o.status == 'Completed' %}
@@ -387,6 +453,12 @@
                   aria-selected="true"
                   aria-controls="cps-panel-event-log"
                   data-cps-tab="event-log">Event log</button>
+          <button class="cps-timeline__tab"
+                  type="button" role="tab"
+                  id="cps-tab-case-notes"
+                  aria-selected="false"
+                  aria-controls="cps-panel-case-notes"
+                  data-cps-tab="case-notes">Case notes</button>
           <button class="cps-timeline__tab"
                   type="button" role="tab"
                   id="cps-tab-reference"
@@ -443,6 +515,60 @@
               Download full event log
             </button>
           </div>
+        </section>
+
+        {# ---- Case notes panel ---- #}
+        <section class="cps-timeline__panel cps-case-notes"
+                 id="cps-panel-case-notes"
+                 role="tabpanel"
+                 aria-labelledby="cps-tab-case-notes"
+                 hidden>
+          <div class="cps-event-log__heading-row">
+            <h3 class="govuk-heading-s cps-event-log__heading">Case notes</h3>
+          </div>
+
+          {# New-note form: textarea + Save button at the top of the panel.
+             JS prepends a new <li> to the list below when Save is clicked. #}
+          <div class="govuk-form-group cps-case-notes__new">
+            <label class="govuk-label" for="new-note">New note</label>
+            <textarea class="govuk-textarea" id="new-note" name="new-note" rows="4"></textarea>
+          </div>
+          <button type="button" class="govuk-button cps-case-notes__save" data-module="govuk-button">
+            Save case note
+          </button>
+
+          {% set caseNotes = [
+            {
+              date: '15 Jun 2025, 11:45',
+              author: 'Sarah Chen, Court Clerk',
+              note: 'Defendant arrived 15 minutes late. Court usher confirmed identity. All parties present and ready to proceed.'
+            },
+            {
+              date: '08 Jun 2025, 14:20',
+              author: 'James Patel, Legal Adviser',
+              note: 'Reviewed case file. Prosecution has indicated they may seek to introduce new evidence at the next hearing. Defence counsel has been notified.'
+            },
+            {
+              date: '22 May 2025, 09:15',
+              author: 'Emma Thompson, Magistrate',
+              note: "Concerns raised about defendant's bail conditions. Recommending review at next sitting. Probation officer to provide an updated report."
+            },
+            {
+              date: '10 May 2025, 16:30',
+              author: 'Sarah Chen, Court Clerk',
+              note: "Case management hearing scheduled. All parties informed. Defendant's address verified."
+            }
+          ] %}
+
+          <ol class="cps-case-notes__list" id="case-notes-list">
+            {% for n in caseNotes %}
+              <li class="cps-case-notes__item">
+                <p class="cps-case-notes__author">{{ n.author }}</p>
+                <p class="cps-case-notes__text">{{ n.note }}</p>
+                <p class="cps-case-notes__time">{{ n.date }}</p>
+              </li>
+            {% endfor %}
+          </ol>
         </section>
 
         {# ---- Reference panel (placeholder) ---- #}

@@ -1,0 +1,73 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Collection order reasons" %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order-type" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Reasons for the collection order</h1>
+      <p class="govuk-body">
+        Optional. Capture the reasons the court relied on when making the order.
+        You can leave any field blank.
+      </p>
+
+      <form action="/fine-flow/collection-order-reasons" method="post" novalidate>
+
+        {{ govukCheckboxes({
+          name: "reasonsAttachmentEarnings",
+          fieldset: {
+            legend: {
+              text: "Reasons for making an attachment of earnings order",
+              classes: "govuk-fieldset__legend--m"
+            }
+          },
+          items: [
+            { value: "compensation-ordered",        text: "Compensation ordered" },
+            { value: "defendant-known-defaulter",   text: "Defendant is a known defaulter" },
+            { value: "defendant-requested",         text: "Defendant requested this" }
+          ],
+          values: data.reasonsAttachmentEarnings
+        }) }}
+
+        {{ govukCheckboxes({
+          name: "reasonsBenefitDeductions",
+          fieldset: {
+            legend: {
+              text: "Reasons for an application for deductions from benefit",
+              classes: "govuk-fieldset__legend--m"
+            }
+          },
+          items: [
+            { value: "compensation-ordered",        text: "Compensation ordered" },
+            { value: "defendant-known-defaulter",   text: "Defendant is a known defaulter" },
+            { value: "defendant-requested",         text: "Defendant requested this" }
+          ],
+          values: data.reasonsBenefitDeductions
+        }) }}
+
+        {{ govukTextarea({
+          name: "reasonNoAttachment",
+          id: "reason-no-attachment",
+          label: {
+            text: "Reason for not making an attachment of earnings or deduction from benefit",
+            classes: "govuk-label--m"
+          },
+          hint: { text: "Free text — only complete if relevant." },
+          rows: 3,
+          value: data.reasonNoAttachment
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

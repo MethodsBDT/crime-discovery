@@ -1,0 +1,35 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Result saved" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {{ govukPanel({
+        titleText: "Result saved",
+        html: "<strong>Fine: £" + (data.fineAmount or "—") + "</strong>"
+      }) }}
+
+      <p class="govuk-body">
+        The fine result has been saved against this offence. You can apply
+        the same result to every other offence on this case, or return to
+        the hearing to enter the next one.
+      </p>
+
+      {{ govukButton({
+        text: "Apply to all other offences",
+        classes: "govuk-button--secondary",
+        href: "#"
+      }) }}
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/enter-results">Return to Enter results</a>
+      </p>
+
+    </div>
+  </div>
+{% endblock %}

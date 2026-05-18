@@ -1,0 +1,89 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Check your answers" %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/account-consolidated" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Check your answers</h1>
+
+      {# Labels for human-readable values. Keep these in sync with the
+         radios on the form pages — easier to read than spreading them
+         through templates. #}
+      {% set typeLabels = {
+        'make-payments-as-ordered': 'Make payments as ordered',
+        'attachment-of-earnings':   'Attachment of earnings',
+        'deductions-from-benefit':  'Deductions from benefit'
+      } %}
+      {% set reasonLabels = {
+        'impracticable':                  'Impracticable',
+        'impractical-inappropriate':      'Impracticable or inappropriate',
+        'inappropriate':                  'Inappropriate'
+      } %}
+      {% set consolidatedLabels = {
+        'existing-number':   'Yes — with existing account number',
+        'existing-accounts': 'Yes — with existing accounts',
+        'no':                'No'
+      } %}
+
+      {{ govukSummaryList({
+        rows: [
+          {
+            key:   { text: "Fine amount" },
+            value: { text: "£" + (data.fineAmount or "—") },
+            actions: { items: [{ href: "/fine-flow/fine-amount", text: "Change", visuallyHiddenText: "fine amount" }] }
+          },
+          {
+            key:   { text: "Collection order made?" },
+            value: { text: (data.collectionOrderMade or "—") | capitalize },
+            actions: { items: [{ href: "/fine-flow/collection-order", text: "Change", visuallyHiddenText: "whether a collection order was made" }] }
+          }
+        ]
+      }) }}
+
+      {% if data.collectionOrderMade == "yes" %}
+        {{ govukSummaryList({
+          rows: [
+            {
+              key:   { text: "Collection order type" },
+              value: { text: typeLabels[data.collectionOrderType] or "—" },
+              actions: { items: [{ href: "/fine-flow/collection-order-type", text: "Change", visuallyHiddenText: "collection order type" }] }
+            }
+          ]
+        }) }}
+      {% elif data.collectionOrderMade == "no" %}
+        {{ govukSummaryList({
+          rows: [
+            {
+              key:   { text: "Reason for no collection order" },
+              value: { text: reasonLabels[data.noCollectionOrderReason] or "—" },
+              actions: { items: [{ href: "/fine-flow/no-collection-order-reason", text: "Change", visuallyHiddenText: "reason for no collection order" }] }
+            }
+          ]
+        }) }}
+      {% endif %}
+
+      {{ govukSummaryList({
+        rows: [
+          {
+            key:   { text: "Account consolidated" },
+            value: { text: consolidatedLabels[data.accountConsolidated] or "—" },
+            actions: { items: [{ href: "/fine-flow/account-consolidated", text: "Change", visuallyHiddenText: "account consolidation" }] }
+          }
+        ]
+      }) }}
+
+      <form action="/fine-flow/check-answers" method="post" novalidate>
+        {{ govukButton({ text: "Save result details" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

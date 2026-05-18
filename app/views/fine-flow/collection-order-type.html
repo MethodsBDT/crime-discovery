@@ -1,0 +1,67 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Collection order type" %}
+
+{% block pageTitle %}
+  {% if errors %}Error: {% endif %}{{ pageName }} - {{ serviceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% if errors and errors.collectionOrderType %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [
+            { text: errors.collectionOrderType.text, href: "#collection-order-type" }
+          ]
+        }) }}
+      {% endif %}
+
+      <form action="/fine-flow/collection-order-type" method="post" novalidate>
+
+        {{ govukRadios({
+          name: "collectionOrderType",
+          idPrefix: "collection-order-type",
+          fieldset: {
+            legend: {
+              text: "What type of collection order has been made?",
+              classes: "govuk-fieldset__legend--l",
+              isPageHeading: true
+            }
+          },
+          hint: {
+            text: "Select the order made by the court. Payment method details will be captured on the next page based on this choice."
+          },
+          items: [
+            { value: "make-payments-as-ordered",
+              text: "Make payments as ordered",
+              hint: { text: "Defendant pays the court directly to agreed payment terms." },
+              checked: data.collectionOrderType == "make-payments-as-ordered" },
+            { value: "attachment-of-earnings",
+              text: "Attachment of earnings",
+              hint: { text: "Court order to deduct payment from the defendant's wages." },
+              checked: data.collectionOrderType == "attachment-of-earnings" },
+            { value: "deductions-from-benefit",
+              text: "Deductions from benefit",
+              hint: { text: "Court order for DWP to deduct payment from the defendant's benefits." },
+              checked: data.collectionOrderType == "deductions-from-benefit" }
+          ],
+          errorMessage: errors.collectionOrderType if errors
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

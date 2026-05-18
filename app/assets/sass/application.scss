@@ -355,6 +355,181 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
   }
 }
 
+// ---------------------------------------------------------------------------
+// "Status: REMANDED IN CUSTODY" line below the Defendant information
+// disclosure. Inline label + govuk-tag.
+// ---------------------------------------------------------------------------
+.cps-defendant-status {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(2);
+  flex-wrap: nowrap;
+  margin: govuk-spacing(2) 0 govuk-spacing(4);
+
+  &__label {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  // govuk-tag defaults to max-width 160px and wraps long status strings.
+  // Force it to a single line for status labels like "REMANDED IN CUSTODY".
+  .govuk-tag {
+    max-width: none;
+    white-space: nowrap;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case section — wraps a URN heading + Offences subheading + offence list.
+// A defendant can have multiple cases; each gets its own section.
+// ---------------------------------------------------------------------------
+.cps-case {
+  margin-top: govuk-spacing(5);
+  border-top: 1px solid $cps-grey-border;
+  padding-top: govuk-spacing(4);
+
+  &:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  &__urn {
+    margin: 0 0 govuk-spacing(1);
+  }
+
+  &__heading {
+    margin: 0 0 govuk-spacing(1);
+  }
+
+  &__progress {
+    color: govuk-colour("black", $variant: "tint-25");
+    margin-bottom: govuk-spacing(3);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Result list — one row per selected hearing result on an offence. Each row
+// is the result name as a link (back into the fine-flow journey to complete
+// or amend it), a status tag, and a Remove button.
+// ---------------------------------------------------------------------------
+.cps-result-list {
+  list-style: none;
+  margin: 0 0 govuk-spacing(3);
+  padding: 0;
+
+  &__heading {
+    margin-top: govuk-spacing(4);
+    margin-bottom: govuk-spacing(1);
+  }
+
+  &__hint {
+    color: govuk-colour("black", $variant: "tint-25");
+    margin: 0 0 govuk-spacing(2);
+  }
+
+  // Each list item is a vertical stack: header row, then (optionally) the
+  // inline journey summary nested below.
+  &__item {
+    padding: govuk-spacing(2) 0;
+    border-top: 1px solid $cps-grey-border;
+    font-size: 19px;
+
+    &:last-child {
+      border-bottom: 1px solid $cps-grey-border;
+    }
+  }
+
+  // Header row inside a list item — link + Remove on the left, status tag on the right.
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: govuk-spacing(3);
+  }
+
+  &__row-main {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(3);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 19px;
+    font-weight: 400;
+  }
+
+  &__status {
+    white-space: nowrap;
+  }
+
+  &__remove {
+    display: inline-flex;
+    align-items: center;
+    gap: govuk-spacing(1);
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: $govuk-font-family;
+    font-size: 16px;
+    color: govuk-colour("blue");
+    padding: govuk-spacing(1) 0;
+
+    &:hover { text-decoration: underline; }
+
+    &:focus {
+      outline: 3px solid govuk-colour("yellow");
+      outline-offset: 2px;
+    }
+  }
+
+  &__empty {
+    color: govuk-colour("black", $variant: "tint-25");
+    margin: 0 0 govuk-spacing(3);
+  }
+
+  &__add {
+    margin: govuk-spacing(3) 0 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Result summary — inline display of the captured journey data
+// (fine amount, collection order, etc.) with a Change link per row.
+// Nested inside the corresponding .cps-result-list__item.
+// ---------------------------------------------------------------------------
+.cps-result-summary {
+  margin: govuk-spacing(2) 0 0;
+
+  &__row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 1fr auto;
+    gap: govuk-spacing(3);
+    padding: govuk-spacing(2) 0;
+    border-bottom: 1px solid $cps-grey-border;
+
+    dt {
+      font-weight: 700;
+      margin: 0;
+    }
+
+    dd {
+      margin: 0;
+    }
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  &__action {
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
 .cps-offence {
   // Reset govuk-task-list's flex layout — we use our own button as the
   // header row and a sibling div for the expanded content.
@@ -376,7 +551,8 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
     width: 4px;
   }
 
-  &--in-progress::before { background: $cps-blue; }
+  &--draft::before       { background: $cps-blue; }
+  &--in-progress::before { background: $cps-blue; } // legacy alias
   &--completed::before   { background: govuk-colour("green"); }
   &--not-started::before { background: govuk-colour("magenta", $variant: "primary"); }
 

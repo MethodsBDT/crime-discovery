@@ -1,0 +1,81 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "No collection order reason" %}
+
+{% block pageTitle %}
+  {% if errors %}Error: {% endif %}{{ pageName }} - {{ serviceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% if errors and errors.noCollectionOrderReason %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [
+            { text: errors.noCollectionOrderReason.text, href: "#no-collection-order-reason" }
+          ]
+        }) }}
+      {% endif %}
+
+      <form action="/fine-flow/no-collection-order-reason" method="post" novalidate>
+
+        {{ govukRadios({
+          name: "noCollectionOrderReason",
+          idPrefix: "no-collection-order-reason",
+          fieldset: {
+            legend: {
+              text: "Why has no collection order been made?",
+              classes: "govuk-fieldset__legend--l",
+              isPageHeading: true
+            }
+          },
+          hint: { text: "Select the statutory ground the court is relying on." },
+          errorMessage: errors.noCollectionOrderReason if errors,
+          items: [
+            {
+              value: "impracticable",
+              text: "Impracticable",
+              hint: { text: "Practically not possible — for example, no fixed address or no income source identified." },
+              checked: data.noCollectionOrderReason == "impracticable"
+            },
+            {
+              value: "inappropriate",
+              text: "Inappropriate",
+              hint: { text: "Possible but not the right outcome here — for example, the court has accepted exceptional hardship." },
+              checked: data.noCollectionOrderReason == "inappropriate"
+            },
+            {
+              value: "impractical-inappropriate",
+              text: "Impracticable or inappropriate",
+              hint: { text: "Use when both grounds apply, or when the court relied on the combined statutory ground." },
+              checked: data.noCollectionOrderReason == "impractical-inappropriate"
+            }
+          ]
+        }) }}
+
+        {{ govukTextarea({
+          id: "no-collection-order-additional",
+          name: "noCollectionOrderAdditional",
+          label: { text: "Additional reasons", classes: "govuk-label--m" },
+          hint: { text: "Optional. Provide any further detail the court should record." },
+          rows: 4,
+          value: data.noCollectionOrderAdditional
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

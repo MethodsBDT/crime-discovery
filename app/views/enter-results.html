@@ -25,49 +25,90 @@
 {% block pageScripts %}
   <script src="https://cdn.jsdelivr.net/npm/accessible-autocomplete@2.0.4/dist/accessible-autocomplete.min.js"></script>
   <script>
-    // Each .cps-result-picker has a <select> that gets enhanced into an
-    // accessible-autocomplete, plus a "Selected case result" display below
-    // with an empty hint and a removable selected-item card.
+    // Each .cps-result-picker has:
+    //   - a <select> enhanced into accessible-autocomplete
+    //   - an empty message, a hint, a list of selected results, and a summary block
+    // The four blocks are always rendered; JS toggles `hidden` based on
+    // whether the list has items, and adds/removes <li>s as the user
+    // picks or removes results.
     function setupResultPicker (picker) {
-      var select = picker.querySelector('select.cps-result-search')
+      var select  = picker.querySelector('select.cps-result-search')
       if (!select) return
 
-      var emptyHint    = picker.querySelector('.cps-result-selected__empty')
-      var selectedItem = picker.querySelector('.cps-result-selected__item')
-      var selectedText = picker.querySelector('.cps-result-selected__text')
-      var removeBtn    = picker.querySelector('.cps-result-selected__remove')
-      var applyBtn     = picker.querySelector('.cps-result-selected__apply')
+      var emptyMsg = picker.querySelector('.cps-result-list__empty')
+      var hint     = picker.querySelector('.cps-result-list__hint')
+      var list     = picker.querySelector('.cps-result-list')
 
-      function showSelected (label) {
-        selectedText.textContent = label
-        selectedItem.hidden = false
-        emptyHint.hidden = true
-        if (applyBtn) applyBtn.disabled = false
+      function syncEmptyState () {
+        var hasItems = list && list.querySelectorAll('li').length > 0
+        if (emptyMsg) emptyMsg.hidden = hasItems
+        if (hint)     hint.hidden     = !hasItems
+        if (list)     list.hidden     = !hasItems
       }
 
-      function clearSelection () {
-        select.value = ''
-        selectedText.textContent = ''
-        selectedItem.hidden = true
-        emptyHint.hidden = false
-        if (applyBtn) applyBtn.disabled = true
-        var input = picker.querySelector('.autocomplete__input')
-        if (input) {
-          input.value = ''
-          input.focus()
+      function addResult (code, name) {
+        if (!list) return
+        // Don't add the same code twice.
+        var existing = list.querySelector('[data-result-code="' + code + '"]')
+        if (existing) return
+
+        var li = document.createElement('li')
+        li.className = 'cps-result-list__item'
+        li.setAttribute('data-result-code', code)
+
+        var row = document.createElement('div')
+        row.className = 'cps-result-list__row'
+
+        var rowMain = document.createElement('div')
+        rowMain.className = 'cps-result-list__row-main'
+
+        var nameLink = document.createElement('a')
+        nameLink.href = '/fine-flow/fine-amount'
+        nameLink.className = 'govuk-link cps-result-list__name'
+        nameLink.textContent = code + ' - ' + name
+
+        var removeBtn = document.createElement('button')
+        removeBtn.type = 'button'
+        removeBtn.className = 'cps-result-list__remove'
+        removeBtn.setAttribute('aria-label', 'Remove ' + code + ' ' + name)
+        removeBtn.innerHTML =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true">' +
+          '<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> Remove'
+
+        rowMain.appendChild(nameLink)
+        rowMain.appendChild(removeBtn)
+
+        var statusWrap = document.createElement('span')
+        statusWrap.className = 'cps-result-list__status'
+        var tag = document.createElement('strong')
+        tag.className = 'govuk-tag govuk-tag--grey'
+        tag.textContent = 'Incomplete'
+        statusWrap.appendChild(tag)
+
+        row.appendChild(rowMain)
+        row.appendChild(statusWrap)
+
+        li.appendChild(row)
+        list.appendChild(li)
+
+        syncEmptyState()
+      }
+
+      // Delegated remove handler — works for both server-rendered items
+      // and items added dynamically by the autocomplete.
+      picker.addEventListener('click', function (event) {
+        var btn = event.target.closest('.cps-result-list__remove')
+        if (!btn) return
+        var li = btn.closest('li')
+        if (li) {
+          li.remove()
+          syncEmptyState()
         }
-      }
+      })
 
-      removeBtn.addEventListener('click', clearSelection)
-
-      // If the page was rendered with a pre-selected option, mirror that
-      // into the selected-result card on load.
-      if (select.value) {
-        var preselected = select.options[select.selectedIndex]
-        if (preselected) showSelected(preselected.text)
-      }
-
-      // Enhance into accessible-autocomplete and listen for confirmation.
+      // Enhance the <select> into accessible-autocomplete. When the user
+      // picks an option, add it to the list and clear the search input so
+      // they can keep adding more.
       window.accessibleAutocomplete.enhanceSelectElement({
         selectElement: select,
         showAllValues: false,
@@ -75,22 +116,26 @@
         displayMenu: 'overlay',
         onConfirm: function (label) {
           if (!label) return
-          // After a confirm, the underlying select.value reflects the
-          // matching option's value; find the option to display its label.
           var option = Array.prototype.find.call(select.options, function (opt) {
             return opt.text === label
           })
           if (!option) return
-          select.value = option.value
-          showSelected(option.text)
-          // Clear the visible autocomplete input on the next tick so the
-          // library doesn't immediately re-paint our cleared value.
+          // Option text format is "CODE — Name" or "CODE - Name".
+          var parts = option.text.split(/\s+[-—]\s+/)
+          var code = parts[0]
+          var name = parts.slice(1).join(' - ') || option.text
+          addResult(code, name)
+          // Reset the search on the next tick (library re-paints synchronously).
           setTimeout(function () {
+            select.value = ''
             var input = picker.querySelector('.autocomplete__input')
             if (input) input.value = ''
           }, 0)
         }
       })
+
+      // Sync once on load in case the server rendered some items.
+      syncEmptyState()
     }
 
     document.querySelectorAll('.cps-result-picker').forEach(setupResultPicker)
@@ -187,6 +232,27 @@
   }) }}
 
   {#
+    Human-readable labels for the kebab-case values stored in session data
+    by the fine-flow journey. Used by the inline summary so users see
+    "Make payments as ordered" rather than "make-payments-as-ordered".
+  #}
+  {% set collectionOrderTypeLabels = {
+    'make-payments-as-ordered': 'Make payments as ordered',
+    'attachment-of-earnings':   'Attachment of earnings',
+    'deductions-from-benefit':  'Deductions from benefit'
+  } %}
+  {% set noCollectionOrderReasonLabels = {
+    'impracticable':              'Impracticable',
+    'inappropriate':              'Inappropriate',
+    'impractical-inappropriate':  'Impracticable or inappropriate'
+  } %}
+  {% set accountConsolidatedLabels = {
+    'existing-number':   'Yes — with existing account number',
+    'existing-accounts': 'Yes — with existing accounts',
+    'no':                'No'
+  } %}
+
+  {#
     Catalogue of hearing results. Powers the typeahead inside each expanded
     offence row. Real product data would come from a backend lookup.
   #}
@@ -250,7 +316,8 @@
   #}
   {% set defendants = [
     {
-      id: 'dayle', first: 'Michael', last: 'DAYLE', urn: 'URN1234563347', complete: 0,
+      id: 'dayle', first: 'Michael', last: 'DAYLE', urn: 'URN1234563347',
+      status: 'On bail', statusClass: 'govuk-tag--grey',
       details: {
         address: '14 Oakwood Lane, Tooting Bec, London, SW17 0TH',
         ageDob: '34 years old (5 February 1991)',
@@ -258,15 +325,22 @@
         arrestSummons: '1438927461',
         relatedCases: ['TVLMD55678901', 'TVLMINE12345678']
       },
-      offences: [
-        { code: 'RT88001', title: 'Driving without due care and attention',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { code: 'RT89102', title: 'Driving with no insurance',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+      cases: [
+        {
+          urn: 'URN1234563347',
+          complete: 0,
+          offences: [
+            { title: 'Driving without due care and attention',
+              status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+            { title: 'Driving with no insurance',
+              status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+          ]
+        }
       ]
     },
     {
-      id: 'green', first: 'Tony', last: 'GREEN', urn: 'URN1234563347', complete: 0,
+      id: 'green', first: 'Tony', last: 'GREEN', urn: 'URN1234563347',
+      status: 'On bail', statusClass: 'govuk-tag--grey',
       details: {
         address: '88 Maple Road, Catford, London, SE6 3QE',
         ageDob: '41 years old (12 November 1983)',
@@ -274,15 +348,22 @@
         arrestSummons: '1872134509',
         relatedCases: ['TVLMINE83920184', 'TVLMD64129883', 'TVLMD27384910']
       },
-      offences: [
-        { code: 'OW20015', title: 'Possession of an offensive weapon in a public place',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { code: 'PO11001', title: 'Threatening behaviour',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+      cases: [
+        {
+          urn: 'URN1234563347',
+          complete: 0,
+          offences: [
+            { title: 'Possession of an offensive weapon in a public place',
+              status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+            { title: 'Threatening behaviour',
+              status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+          ]
+        }
       ]
     },
     {
-      id: 'mann', first: 'Timmy', last: 'MANN', urn: 'URN1234563347', selected: true, complete: 1,
+      id: 'mann', first: 'Timmy', last: 'MANN', urn: 'URN30567978', selected: true,
+      status: 'Remanded in custody', statusClass: 'govuk-tag--grey',
       details: {
         address: 'Flat 1, Armageddon House, 15 Regent Street, Giggleswick, Merton, London, SW11 5TQ',
         ageDob: '27 years old (17 October 1998)',
@@ -290,20 +371,44 @@
         arrestSummons: '1253698532',
         relatedCases: ['TVLMD72524060', 'TVLMD32228753', 'TVLMINE77958164', 'TVLMD21829874', 'TVLMINE29456495']
       },
-      offences: [
-        { code: 'CA03011', title: 'Fail / refuse give assistance to person executing Communications Act search warrant',
-          status: 'In progress', statusClass: 'govuk-tag--blue', statusModifier: 'in-progress',
-          expanded: true, value: '' },
-        { code: 'CA56403', title: 'Possession of prohibited communication device',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { code: 'PJ9012',  title: 'Obstructing officer',
-          status: 'Completed',    statusClass: 'govuk-tag--green', statusModifier: 'completed' },
-        { code: 'GE00012', title: 'Another offence',
-          status: 'Not started',  statusClass: 'govuk-tag--grey',  statusModifier: 'not-started' }
+      cases: [
+        {
+          urn: 'URN30567978',
+          complete: 1,
+          offences: [
+            { title: 'Contrary to section 363(3)(a) and (4) of the Communications Act 2003.',
+              status: 'Draft', statusClass: 'govuk-tag--blue', statusModifier: 'draft',
+              expanded: true,
+              selectedResults: [
+                { code: 'FO',     name: 'Fine',
+                  status: 'Incomplete', statusClass: 'govuk-tag--grey',
+                  href: '/fine-flow/fine-amount' },
+                { code: 'TFOOUT', name: 'Transfer of Fine Order to a Court in England or Wales',
+                  status: 'Incomplete', statusClass: 'govuk-tag--grey',
+                  href: '#' }
+              ]
+            },
+            { title: 'Contrary to section 87(1) of the Road Traffic Act 1988 and Schedule 2 to the Road Traffic Offenders Act 1988.',
+              status: 'Not started', statusClass: 'govuk-tag--pink', statusModifier: 'not-started' },
+            { title: '2 counts of obstructing officer',
+              status: 'Saved', statusClass: 'govuk-tag--green', statusModifier: 'completed' }
+          ]
+        },
+        {
+          urn: 'URN30567979',
+          complete: 0,
+          offences: [
+            { title: 'Contrary to section 87(1) of the Road Traffic Act 1988 and Schedule 2 to the Road Traffic Offenders Act 1988.',
+              status: 'Not started', statusClass: 'govuk-tag--pink', statusModifier: 'not-started' },
+            { title: 'Failing to provide a specimen for analysis',
+              status: 'Not started', statusClass: 'govuk-tag--pink', statusModifier: 'not-started' }
+          ]
+        }
       ]
     },
     {
-      id: 'norton', first: 'Lisa', last: 'NORTON', urn: 'URN1234563347', complete: 0,
+      id: 'norton', first: 'Lisa', last: 'NORTON', urn: 'URN1234563347',
+      status: 'On bail', statusClass: 'govuk-tag--grey',
       details: {
         address: '7 Beechwood Court, Croydon, Surrey, CR0 6JL',
         ageDob: '29 years old (3 March 1996)',
@@ -311,11 +416,17 @@
         arrestSummons: '1564738291',
         relatedCases: ['TVLMD81029384', 'TVLMINE56473829']
       },
-      offences: [
-        { code: 'TH15101', title: 'Theft from a shop',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
-        { code: 'BA20005', title: 'Failing to surrender to custody',
-          status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+      cases: [
+        {
+          urn: 'URN1234563347',
+          complete: 0,
+          offences: [
+            { title: 'Theft from a shop',
+              status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' },
+            { title: 'Failing to surrender to custody',
+              status: 'Not started',  statusClass: 'govuk-tag--pink',  statusModifier: 'not-started' }
+          ]
+        }
       ]
     }
   ] %}
@@ -336,12 +447,19 @@
         <form action="/enter-results" method="post" novalidate>
           <div class="govuk-radios govuk-radios--small cps-defendants__list" data-module="govuk-radios">
             {% for d in defendants %}
+              {# Sum offence totals across all cases for the progress label. #}
+              {% set totalComplete = 0 %}
+              {% set totalOffences = 0 %}
+              {% for c in d.cases %}
+                {% set totalComplete = totalComplete + c.complete %}
+                {% set totalOffences = totalOffences + c.offences | length %}
+              {% endfor %}
               <div class="govuk-radios__item cps-defendants__item{% if d.selected %} cps-defendants__item--selected{% endif %}">
                 <input class="govuk-radios__input" id="defendant-{{ d.id }}" name="defendant" type="radio" value="{{ d.id }}"{% if d.selected %} checked{% endif %}>
                 <label class="govuk-label govuk-radios__label cps-defendants__label" for="defendant-{{ d.id }}">
                   <span class="cps-defendants__name"><strong>{{ d.last }}</strong>, {{ d.first }}</span>
                   <span class="cps-defendants__urn">{{ d.urn }}</span>
-                  <span class="cps-defendants__progress">({{ d.complete }} of {{ d.offences | length }} offences complete)</span>
+                  <span class="cps-defendants__progress">({{ d.cases[0].complete }} of {{ d.cases[0].offences | length }} offences complete)</span>
                 </label>
               </div>
             {% endfor %}
@@ -350,9 +468,11 @@
       </section>
     </div>
 
-    {# ---------- Centre: offences accordion ----------
-       One panel per defendant, all rendered up front. JS toggles `hidden`
-       on the wrappers so switching defendants is instant. #}
+    {# ---------- Centre: cases + offences ----------
+       One panel per defendant. Inside each panel, offences are grouped by
+       case (URN heading). Each row is a govuk-task-list item with our own
+       expand/collapse toggle. JS toggles `hidden` on the defendant panels
+       so switching defendants is instant. #}
     <div class="govuk-grid-column-one-half">
       {% for d in defendants %}
         <section class="cps-offences"
@@ -362,10 +482,8 @@
           <h2 class="govuk-heading-m cps-offences__heading">
             <a href="#" class="govuk-link">{{ d.last }}, {{ d.first }}</a>
           </h2>
-          <p class="govuk-body cps-offences__progress">{{ d.complete }} of {{ d.offences | length }} offences completed</p>
 
-          {# "Defendant information" disclosure — pre-populated with dummy
-             personal data per defendant. #}
+          {# Defendant information disclosure — collapsed by default. #}
           {% set defendantInfoHtml %}
             <dl class="cps-defendant-info">
               <dt>Address</dt>
@@ -378,89 +496,152 @@
               <dd>{{ d.details.arrestSummons }}</dd>
               <dt>Related cases</dt>
               <dd>
-                {% for c in d.details.relatedCases -%}
-                  <a href="#" class="govuk-link">{{ c }}</a>{% if not loop.last %}, {% endif %}
+                {% for rc in d.details.relatedCases -%}
+                  <a href="#" class="govuk-link">{{ rc }}</a>{% if not loop.last %}, {% endif %}
                 {%- endfor %}
               </dd>
             </dl>
           {% endset %}
+          {{ govukDetails({ summaryText: "Defendant information", html: defendantInfoHtml }) }}
 
-          {{ govukDetails({
-            summaryText: "Defendant information",
-            html: defendantInfoHtml
-          }) }}
+          {# Defendant status tag — sits between the disclosure and the cases. #}
+          <p class="cps-defendant-status govuk-body">
+            <span class="cps-defendant-status__label">Status:</span>
+            {{ govukTag({ text: d.status | upper, classes: d.statusClass }) }}
+          </p>
 
-          {# Task-list pattern with custom expand/collapse on each row.
-             Click anywhere on the row toggles aria-expanded on the button;
-             JS shows/hides the sibling .cps-offence__content and the
-             chevron rotates 180° via CSS. #}
-          <ul class="govuk-task-list cps-offences__list">
-            {% for o in d.offences %}
-              {% set offenceId = 'offence-' + d.id + '-' + loop.index | string %}
-              <li class="govuk-task-list__item cps-offence cps-offence--{{ o.statusModifier }}">
-                <button type="button"
-                        class="cps-offence__toggle"
-                        aria-expanded="{{ 'true' if o.expanded else 'false' }}"
-                        aria-controls="{{ offenceId }}-content">
-                  <span class="cps-offence__title">
-                    <span class="cps-offence__number" aria-hidden="true">{{ loop.index }}</span>
-                    <span class="cps-offence__text">
-                      <span class="cps-offence__title-text">{{ o.title }}</span>
-                    </span>
-                  </span>
-                  <span class="cps-offence__status-row">
-                    {{ govukTag({ text: o.status, classes: o.statusClass }) }}
-                    <svg class="cps-offence__chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </span>
-                </button>
+          {# One section per case, each with its own URN heading and offences list. #}
+          {% for case in d.cases %}
+            <section class="cps-case">
+              <h3 class="govuk-heading-m cps-case__urn">{{ case.urn }}</h3>
+              <h4 class="govuk-heading-s cps-case__heading">Offences</h4>
+              <p class="govuk-body cps-case__progress">{{ case.complete }} of {{ case.offences | length }} offences completed</p>
 
-                <div class="cps-offence__content" id="{{ offenceId }}-content"{% if not o.expanded %} hidden{% endif %}>
-                  {% if o.expanded %}
-                    <div class="cps-result-picker">
-                      <div class="govuk-form-group">
-                        <label class="govuk-label govuk-label--s" for="{{ offenceId }}-result">
-                          What is the result of the offence?
-                        </label>
-                        <div id="{{ offenceId }}-result-hint" class="govuk-hint">
-                          Start typing to search for a type of result using the code or word
+              <ul class="govuk-task-list cps-offences__list">
+                {% for o in case.offences %}
+                  {% set offenceId = 'offence-' + d.id + '-' + loop.index0 | string + '-' + loop.index | string %}
+                  <li class="govuk-task-list__item cps-offence cps-offence--{{ o.statusModifier }}">
+                    <button type="button"
+                            class="cps-offence__toggle"
+                            aria-expanded="{{ 'true' if o.expanded else 'false' }}"
+                            aria-controls="{{ offenceId }}-content">
+                      <span class="cps-offence__title">
+                        <span class="cps-offence__number" aria-hidden="true">{{ loop.index }}</span>
+                        <span class="cps-offence__text">
+                          <span class="cps-offence__title-text">{{ o.title }}</span>
+                        </span>
+                      </span>
+                      <span class="cps-offence__status-row">
+                        {{ govukTag({ text: o.status, classes: o.statusClass }) }}
+                        <svg class="cps-offence__chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </span>
+                    </button>
+
+                    <div class="cps-offence__content" id="{{ offenceId }}-content"{% if not o.expanded %} hidden{% endif %}>
+                      <div class="cps-result-picker">
+                        <div class="govuk-form-group">
+                          <label class="govuk-label govuk-label--s" for="{{ offenceId }}-result">
+                            What is the result of the hearing?
+                          </label>
+                          <div id="{{ offenceId }}-result-hint" class="govuk-hint">
+                            Start typing to search for a type of result using the code or word
+                          </div>
+                          <select class="govuk-select cps-result-search"
+                                  id="{{ offenceId }}-result"
+                                  name="{{ offenceId }}-result"
+                                  aria-describedby="{{ offenceId }}-result-hint">
+                            <option value=""></option>
+                            {% for r in resultsCatalogue %}
+                              <option value="{{ r.code }}">{{ r.code }} — {{ r.name }}</option>
+                            {% endfor %}
+                          </select>
                         </div>
-                        {# Enhanced into an accessible-autocomplete on page load.
-                           Falls back to a native <select> if JS is disabled. #}
-                        <select class="govuk-select cps-result-search"
-                                id="{{ offenceId }}-result"
-                                name="{{ offenceId }}-result"
-                                aria-describedby="{{ offenceId }}-result-hint">
-                          <option value=""></option>
-                          {% for r in resultsCatalogue %}
-                            <option value="{{ r.code }}"{% if r.code == o.value %} selected{% endif %}>{{ r.code }} — {{ r.name }}</option>
+
+                        <h4 class="govuk-heading-s cps-result-list__heading">Selected hearing result:</h4>
+
+                        {# All four blocks below are always rendered. JS in
+                           application.js toggles `hidden` on them based on
+                           whether the list has any items. That way the
+                           autocomplete can add/remove items without round-
+                           tripping to the server. #}
+
+                        <p class="cps-result-list__empty govuk-body"
+                           {% if o.selectedResults and o.selectedResults | length %}hidden{% endif %}>
+                          None recorded — search above to add a result
+                        </p>
+
+                        <p class="govuk-hint cps-result-list__hint"
+                           {% if not o.selectedResults or not o.selectedResults | length %}hidden{% endif %}>
+                          Click a result to complete or amend it. To add another, search above.
+                        </p>
+
+                        <ul class="cps-result-list"
+                            {% if not o.selectedResults or not o.selectedResults | length %}hidden{% endif %}>
+                          {% for r in o.selectedResults %}
+                            {# FO becomes "Completed" once the user has finished the fine-flow
+                               journey. Other codes use whatever status the seed data carries. #}
+                            {% set foCompleted = r.code == 'FO' and data.fineFlowCompleted %}
+                            {% set displayStatus      = 'Completed'           if foCompleted else r.status %}
+                            {% set displayStatusClass = 'govuk-tag--green'    if foCompleted else r.statusClass %}
+
+                            <li class="cps-result-list__item" data-result-code="{{ r.code }}">
+                              <div class="cps-result-list__row">
+                                <div class="cps-result-list__row-main">
+                                  <a href="{{ r.href }}" class="govuk-link cps-result-list__name">{{ r.code }} - {{ r.name }}</a>
+                                  <button type="button" class="cps-result-list__remove" aria-label="Remove {{ r.code }} {{ r.name }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                                    Remove
+                                  </button>
+                                </div>
+                                <span class="cps-result-list__status">
+                                  {{ govukTag({ text: displayStatus, classes: displayStatusClass }) }}
+                                </span>
+                              </div>
+
+                              {# Inline summary of the FO journey — shown only when complete. #}
+                              {% if foCompleted %}
+                                <dl class="cps-result-summary">
+                                  <div class="cps-result-summary__row">
+                                    <dt>Fine amount</dt>
+                                    <dd>£{{ data.fineAmount }}</dd>
+                                    <dd class="cps-result-summary__action"><a href="/fine-flow/fine-amount" class="govuk-link">Change</a></dd>
+                                  </div>
+                                  <div class="cps-result-summary__row">
+                                    <dt>Collection order made?</dt>
+                                    <dd>{{ 'Yes' if data.collectionOrderMade == 'yes' else 'No' }}</dd>
+                                    <dd class="cps-result-summary__action"><a href="/fine-flow/collection-order" class="govuk-link">Change</a></dd>
+                                  </div>
+                                  {% if data.collectionOrderMade == 'no' and data.noCollectionOrderReason %}
+                                    <div class="cps-result-summary__row">
+                                      <dt>Reason for no collection order</dt>
+                                      <dd>{{ noCollectionOrderReasonLabels[data.noCollectionOrderReason] or data.noCollectionOrderReason }}</dd>
+                                      <dd class="cps-result-summary__action"><a href="/fine-flow/no-collection-order-reason" class="govuk-link">Change</a></dd>
+                                    </div>
+                                  {% endif %}
+                                  {% if data.collectionOrderMade == 'yes' and data.collectionOrderType %}
+                                    <div class="cps-result-summary__row">
+                                      <dt>Collection order type</dt>
+                                      <dd>{{ collectionOrderTypeLabels[data.collectionOrderType] or data.collectionOrderType }}</dd>
+                                      <dd class="cps-result-summary__action"><a href="/fine-flow/collection-order-type" class="govuk-link">Change</a></dd>
+                                    </div>
+                                  {% endif %}
+                                  <div class="cps-result-summary__row">
+                                    <dt>Account consolidated</dt>
+                                    <dd>{{ accountConsolidatedLabels[data.accountConsolidated] or 'No' }}</dd>
+                                    <dd class="cps-result-summary__action"><a href="/fine-flow/account-consolidated" class="govuk-link">Change</a></dd>
+                                  </div>
+                                </dl>
+                              {% endif %}
+                            </li>
                           {% endfor %}
-                        </select>
-                      </div>
-
-                      <h3 class="govuk-heading-s cps-result-selected__heading">Selected case result:</h3>
-                      <div class="cps-result-selected">
-                        <p class="cps-result-selected__empty govuk-body">None recorded, select a case result above</p>
-                        <div class="cps-result-selected__item" hidden>
-                          <span class="cps-result-selected__text"></span>
-                          <button type="button" class="cps-result-selected__remove" aria-label="Remove selected case result">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-                            Remove
-                          </button>
-                        </div>
-                        <button type="button" class="govuk-button cps-result-selected__apply" data-module="govuk-button" disabled>
-                          Apply to other offences
-                        </button>
+                        </ul>
                       </div>
                     </div>
-                  {% elif o.status == 'Completed' %}
-                    <p class="govuk-body">Result entered.</p>
-                  {% else %}
-                    <p class="govuk-body">No result entered yet.</p>
-                  {% endif %}
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
+                  </li>
+                {% endfor %}
+              </ul>
+            </section>
+          {% endfor %}
         </section>
       {% endfor %}
     </div>

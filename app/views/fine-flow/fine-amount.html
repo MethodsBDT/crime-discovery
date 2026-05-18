@@ -1,0 +1,54 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Fine amount" %}
+
+{% block pageTitle %}
+  {% if errors %}Error: {% endif %}{{ pageName }} - {{ serviceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/enter-results" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% if errors and errors.fineAmount %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [
+            { text: errors.fineAmount.text, href: "#fine-amount" }
+          ]
+        }) }}
+      {% endif %}
+
+      <form action="/fine-flow/fine-amount" method="post" novalidate>
+
+        {{ govukInput({
+          label: {
+            text: "What was the fine amount?",
+            classes: "govuk-label--l",
+            isPageHeading: true
+          },
+          hint: { text: "For example, £30.40" },
+          id: "fine-amount",
+          name: "fineAmount",
+          classes: "govuk-input--width-5",
+          prefix: { text: "£" },
+          value: data.fineAmount,
+          spellcheck: false,
+          inputmode: "decimal",
+          errorMessage: errors.fineAmount if errors
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

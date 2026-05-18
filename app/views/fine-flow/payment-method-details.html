@@ -1,0 +1,112 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Payment method details" %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order-reasons" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {# Branch the form contents based on the collection-order type chosen
+         earlier. Each branch is its own coherent "single question" — even
+         though some have several inputs, they all describe one thing
+         (e.g. "what are the instalment terms?" or "where does the
+         defendant work?"). #}
+
+      {% if data.collectionOrderType == "attachment-of-earnings" %}
+        <h1 class="govuk-heading-l">Employer details for attachment of earnings</h1>
+
+        <form action="/fine-flow/payment-method-details" method="post" novalidate>
+          {{ govukInput({ label: { text: "Employer organisation name" },
+                          id: "employer-name", name: "employerName", value: data.employerName }) }}
+          {{ govukInput({ label: { text: "Address line 1" },
+                          id: "employer-address-1", name: "employerAddress1", value: data.employerAddress1 }) }}
+          {{ govukInput({ label: { text: "Address line 2 (optional)" },
+                          id: "employer-address-2", name: "employerAddress2", value: data.employerAddress2 }) }}
+          {{ govukInput({ label: { text: "Town or city" },
+                          id: "employer-town", name: "employerTown", value: data.employerTown }) }}
+          {{ govukInput({ label: { text: "Postcode" },
+                          classes: "govuk-input--width-10",
+                          id: "employer-postcode", name: "employerPostcode", value: data.employerPostcode }) }}
+          {{ govukInput({ label: { text: "Employee reference number" },
+                          id: "employee-ref", name: "employeeRef", value: data.employeeRef }) }}
+
+          {{ govukButton({ text: "Continue" }) }}
+        </form>
+
+      {% elif data.collectionOrderType == "deductions-from-benefit" %}
+        <h1 class="govuk-heading-l">Application for benefit deductions</h1>
+
+        <form action="/fine-flow/payment-method-details" method="post" novalidate>
+          {{ govukSelect({
+            id: "benefit-reason",
+            name: "benefitReason",
+            label: { text: "Reason" },
+            items: [
+              { value: "",                          text: "Choose a reason", selected: not data.benefitReason },
+              { value: "compensation-ordered",      text: "Compensation ordered",
+                selected: data.benefitReason == "compensation-ordered" },
+              { value: "defendant-known-defaulter", text: "Defendant is a known defaulter",
+                selected: data.benefitReason == "defendant-known-defaulter" },
+              { value: "defendant-requested",       text: "Defendant requested this",
+                selected: data.benefitReason == "defendant-requested" }
+            ]
+          }) }}
+
+          {{ govukInput({ label: { text: "DWP AP number" },
+                          id: "dwp-ap-number", name: "dwpApNumber",
+                          classes: "govuk-input--width-20",
+                          value: data.dwpApNumber }) }}
+
+          {{ govukButton({ text: "Continue" }) }}
+        </form>
+
+      {% else %}
+        <h1 class="govuk-heading-l">Payment terms</h1>
+
+        <form action="/fine-flow/payment-method-details" method="post" novalidate>
+          {{ govukRadios({
+            name: "paymentTerms",
+            fieldset: { legend: { text: "Select the payment terms", classes: "govuk-fieldset__legend--m" } },
+            items: [
+              { value: "instalments-only",         text: "Instalments only",
+                checked: data.paymentTerms == "instalments-only" },
+              { value: "pay-by-date",              text: "Pay by date",
+                checked: data.paymentTerms == "pay-by-date" },
+              { value: "on-release",               text: "Pay on release",
+                checked: data.paymentTerms == "on-release" },
+              { value: "lump-sum-plus-instalments",text: "Lump sum plus instalments",
+                checked: data.paymentTerms == "lump-sum-plus-instalments" }
+            ]
+          }) }}
+
+          {{ govukDateInput({
+            id: "instalment-start",
+            namePrefix: "instalmentStart",
+            fieldset: { legend: { text: "Instalment start date (optional)", classes: "govuk-fieldset__legend--m" } },
+            hint: { text: "For example, 27 4 2026" },
+            items: [
+              { name: "day",   classes: "govuk-input--width-2", value: data['instalmentStart-day'] },
+              { name: "month", classes: "govuk-input--width-2", value: data['instalmentStart-month'] },
+              { name: "year",  classes: "govuk-input--width-4", value: data['instalmentStart-year'] }
+            ]
+          }) }}
+
+          {{ govukButton({ text: "Continue" }) }}
+        </form>
+      {% endif %}
+
+    </div>
+  </div>
+{% endblock %}

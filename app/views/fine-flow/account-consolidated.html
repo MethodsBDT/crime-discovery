@@ -1,0 +1,58 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Account consolidated" %}
+
+{% block beforeContent %}
+  {% set backHref = "/fine-flow/payment-method-details" if data.collectionOrderMade == "yes" else "/fine-flow/no-collection-order-reason" %}
+  {{ govukBackLink({ text: "Back", href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <form action="/fine-flow/account-consolidated" method="post" novalidate>
+
+        {{ govukRadios({
+          name: "accountConsolidated",
+          fieldset: {
+            legend: {
+              text: "Should this result be consolidated with an existing account?",
+              classes: "govuk-fieldset__legend--l",
+              isPageHeading: true
+            }
+          },
+          hint: { text: "Optional. Skip if the court has not made a consolidation order." },
+          items: [
+            { value: "existing-number", text: "Yes — consolidate with an existing account number",
+              checked: data.accountConsolidated == "existing-number",
+              conditional: { html: govukInput({
+                id: "existing-account-number", name: "existingAccountNumber",
+                label: { text: "Account number" },
+                classes: "govuk-input--width-20",
+                value: data.existingAccountNumber }) } },
+            { value: "existing-accounts", text: "Yes — consolidate with existing accounts",
+              checked: data.accountConsolidated == "existing-accounts" },
+            { value: "no", text: "No",
+              checked: data.accountConsolidated == "no" or not data.accountConsolidated }
+          ]
+        }) }}
+
+        {{ govukTextarea({
+          id: "account-consolidated-notes",
+          name: "accountConsolidatedNotes",
+          label: { text: "Additional information (optional)", classes: "govuk-label--m" },
+          rows: 3,
+          value: data.accountConsolidatedNotes
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

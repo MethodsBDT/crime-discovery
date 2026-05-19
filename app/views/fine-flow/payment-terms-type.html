@@ -1,0 +1,75 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Payment terms" %}
+
+{% block pageTitle %}
+  {% if errors %}Error: {% endif %}{{ pageName }} - {{ serviceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order-reasons" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% if errors and errors.paymentTermsType %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [{ text: errors.paymentTermsType.text, href: "#payment-terms-type" }]
+        }) }}
+      {% endif %}
+
+      <form action="/fine-flow/payment-terms-type" method="post" novalidate>
+
+        {{ govukRadios({
+          name: "paymentTermsType",
+          idPrefix: "payment-terms-type",
+          fieldset: {
+            legend: {
+              text: "What payment terms has the court ordered?",
+              classes: "govuk-fieldset__legend--l",
+              isPageHeading: true
+            }
+          },
+          hint: { text: "How the defendant will pay the fine over time." },
+          items: [
+            {
+              value: "instalments-only",
+              text: "Instalments only",
+              hint: { text: "Regular payments over time — for example weekly or monthly." },
+              checked: data.paymentTermsType == "instalments-only"
+            },
+            {
+              value: "pay-by-date",
+              text: "Pay by date",
+              hint: { text: "Full amount due by a single date." },
+              checked: data.paymentTermsType == "pay-by-date"
+            },
+            {
+              value: "on-release",
+              text: "On release",
+              hint: { text: "Full amount due after the defendant is released from custody." },
+              checked: data.paymentTermsType == "on-release"
+            },
+            {
+              value: "lump-sum-plus-instalments",
+              text: "Lump sum plus instalments",
+              hint: { text: "Lump sum first, then regular instalments for the balance." },
+              checked: data.paymentTermsType == "lump-sum-plus-instalments"
+            }
+          ],
+          errorMessage: errors.paymentTermsType if errors
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Employer details" %}
+
+{% block pageTitle %}
+  {% if errors %}Error: {% endif %}{{ pageName }} - {{ serviceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order-reasons" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Employer details</h1>
+      <p class="govuk-body">
+        Where the defendant works. HMCTS will use this address to send the
+        attachment of earnings order.
+      </p>
+
+      {% if errors %}
+        {% set errorList = [] %}
+        {% if errors.employerName     %}{% set errorList = errorList.concat([{ text: errors.employerName.text,     href: "#employer-name" }]) %}{% endif %}
+        {% if errors.employerAddress1 %}{% set errorList = errorList.concat([{ text: errors.employerAddress1.text, href: "#employer-address-1" }]) %}{% endif %}
+        {% if errors.employerPostcode %}{% set errorList = errorList.concat([{ text: errors.employerPostcode.text, href: "#employer-postcode" }]) %}{% endif %}
+        {% if errorList | length %}
+          {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+        {% endif %}
+      {% endif %}
+
+      <form action="/fine-flow/employer-details" method="post" novalidate>
+
+        {{ govukInput({
+          label: { text: "Employer organisation name" },
+          id: "employer-name", name: "employerName",
+          value: data.employerName,
+          errorMessage: errors.employerName if errors
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Address line 1" },
+          id: "employer-address-1", name: "employerAddress1",
+          value: data.employerAddress1,
+          autocomplete: "address-line1",
+          errorMessage: errors.employerAddress1 if errors
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Address line 2 (optional)" },
+          id: "employer-address-2", name: "employerAddress2",
+          value: data.employerAddress2,
+          autocomplete: "address-line2"
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Town or city" },
+          id: "employer-town", name: "employerTown",
+          classes: "govuk-!-width-two-thirds",
+          value: data.employerTown,
+          autocomplete: "address-level2"
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Postcode" },
+          id: "employer-postcode", name: "employerPostcode",
+          classes: "govuk-input--width-10",
+          value: data.employerPostcode,
+          autocomplete: "postal-code",
+          errorMessage: errors.employerPostcode if errors
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Employee reference number (optional)" },
+          hint: { text: "Used by the employer to identify the defendant — payroll number or similar." },
+          id: "employee-ref", name: "employeeRef",
+          value: data.employeeRef
+        }) }}
+
+        {% set optionalHtml %}
+          {{ govukInput({
+            label: { text: "Employer email address", classes: "govuk-label--s" },
+            id: "employer-email", name: "employerEmail",
+            type: "email", autocomplete: "email",
+            value: data.employerEmail
+          }) }}
+          {{ govukTextarea({
+            label: { text: "Reason for the order", classes: "govuk-label--s" },
+            id: "employer-reason", name: "employerReason",
+            rows: 3,
+            value: data.employerReason
+          }) }}
+        {% endset %}
+
+        {{ govukDetails({
+          summaryText: "Optional details",
+          html: optionalHtml
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

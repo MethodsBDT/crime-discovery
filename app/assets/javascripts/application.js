@@ -111,6 +111,33 @@ window.GOVUKPrototypeKit.documentReady(() => {
   })
 
   // ---------------------------------------------------------------------------
+  // "Expand all" / "Collapse all" toggle. One button per defendant panel —
+  // it flips every cps-offence__toggle inside the panel in lockstep with
+  // its own aria-expanded state. Button label and aria-expanded reflect
+  // the resulting state.
+  // ---------------------------------------------------------------------------
+  document.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-cps-expand-all]')
+    if (!btn) return
+
+    const panel = btn.closest('[data-defendant-panel]')
+    if (!panel) return
+
+    const expandAll = btn.getAttribute('aria-expanded') !== 'true'
+
+    panel.querySelectorAll('.cps-offence__toggle').forEach((toggle) => {
+      toggle.setAttribute('aria-expanded', expandAll ? 'true' : 'false')
+      const contentId = toggle.getAttribute('aria-controls')
+      const content = contentId ? document.getElementById(contentId) : null
+      if (content) content.hidden = !expandAll
+    })
+
+    btn.setAttribute('aria-expanded', expandAll ? 'true' : 'false')
+    const label = btn.querySelector('.cps-offences__expand-all-text')
+    if (label) label.textContent = expandAll ? 'Collapse all' : 'Expand all'
+  })
+
+  // ---------------------------------------------------------------------------
   // Offence row expand/collapse. Each offence has a <button class="cps-offence__toggle">
   // with aria-expanded + aria-controls pointing at its content div. Clicking the
   // button flips aria-expanded and shows/hides the content. The chevron rotates

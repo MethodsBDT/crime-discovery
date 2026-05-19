@@ -9,7 +9,18 @@
 {% set pageName = "Account consolidated" %}
 
 {% block beforeContent %}
-  {% set backHref = "/fine-flow/payment-method-details" if data.collectionOrderMade == "yes" else "/fine-flow/no-collection-order-reason" %}
+  {# Back-link target depends on which branch the user just came down. #}
+  {% if data.collectionOrderMade == "no" %}
+    {% set backHref = "/fine-flow/no-collection-order-reason" %}
+  {% elif data.collectionOrderType == "make-payments-as-ordered" %}
+    {% set backHref = "/fine-flow/payment-terms-details" %}
+  {% elif data.collectionOrderType == "attachment-of-earnings" %}
+    {% set backHref = "/fine-flow/employer-details" %}
+  {% elif data.collectionOrderType == "deductions-from-benefit" %}
+    {% set backHref = "/fine-flow/reserve-terms-details" %}
+  {% else %}
+    {% set backHref = "/fine-flow/collection-order" %}
+  {% endif %}
   {{ govukBackLink({ text: "Back", href: backHref }) }}
 {% endblock %}
 

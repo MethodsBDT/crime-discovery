@@ -1,0 +1,67 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Application for benefit deductions" %}
+
+{% block pageTitle %}
+  {% if errors %}Error: {% endif %}{{ pageName }} - {{ serviceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: "Back", href: "/fine-flow/collection-order-reasons" }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Application for benefit deductions</h1>
+      <p class="govuk-body">
+        The court is asking the Department for Work and Pensions (DWP) to
+        deduct payments from the defendant's benefits.
+      </p>
+
+      {% if errors %}
+        {% set errorList = [] %}
+        {% if errors.benefitReason %}{% set errorList = errorList.concat([{ text: errors.benefitReason.text, href: "#benefit-reason" }]) %}{% endif %}
+        {% if errors.dwpApNumber   %}{% set errorList = errorList.concat([{ text: errors.dwpApNumber.text,   href: "#dwp-ap-number" }]) %}{% endif %}
+        {% if errorList | length %}
+          {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+        {% endif %}
+      {% endif %}
+
+      <form action="/fine-flow/dwp-application" method="post" novalidate>
+
+        {{ govukSelect({
+          id: "benefit-reason", name: "benefitReason",
+          label: { text: "Reason for the application" },
+          items: [
+            { value: "",                          text: "Choose a reason", selected: not data.benefitReason },
+            { value: "compensation-ordered",      text: "Compensation ordered",
+              selected: data.benefitReason == "compensation-ordered" },
+            { value: "defendant-known-defaulter", text: "Defendant is a known defaulter",
+              selected: data.benefitReason == "defendant-known-defaulter" },
+            { value: "defendant-requested",       text: "Defendant requested this",
+              selected: data.benefitReason == "defendant-requested" }
+          ],
+          errorMessage: errors.benefitReason if errors
+        }) }}
+
+        {{ govukInput({
+          label: { text: "DWP AP number" },
+          hint: { text: "The reference number DWP gave the court for this application." },
+          id: "dwp-ap-number", name: "dwpApNumber",
+          classes: "govuk-input--width-20",
+          value: data.dwpApNumber,
+          errorMessage: errors.dwpApNumber if errors
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

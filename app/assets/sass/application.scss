@@ -302,6 +302,57 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
 }
 
 // ---------------------------------------------------------------------------
+// Expand-all toggle — one per defendant panel, sits between the status
+// tag and the first case section. Plain text-button styling so it doesn't
+// compete with the primary action on the page.
+// ---------------------------------------------------------------------------
+.cps-offences__expand-all-wrapper {
+  margin: 0 0 govuk-spacing(3);
+  text-align: right;
+}
+
+// Row that holds the defendant status on the left and the Expand all /
+// Collapse all toggle on the right. The flex layout pushes the toggle to
+// the far edge of the offences column.
+.cps-defendant-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(3);
+  margin: govuk-spacing(2) 0 govuk-spacing(4);
+
+  // The inner status paragraph already has its own flex / gap rules — drop
+  // its top/bottom margins so the row controls vertical rhythm.
+  .cps-defendant-status {
+    margin: 0;
+  }
+}
+
+.cps-offences__expand-all {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: $cps-blue;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 0.1em;
+
+  &:hover {
+    color: $cps-blue-dark;
+    text-decoration-thickness: 2px;
+  }
+
+  &:focus {
+    outline: 3px solid govuk-colour("yellow");
+    outline-offset: 2px;
+    background: govuk-colour("yellow");
+    color: govuk-colour("black");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Offences — govuk-task-list pattern with custom expand/collapse on each
 // row. Each <li> contains a <button class="cps-offence__toggle"> (the
 // click target spanning the whole header row) and a sibling content div
@@ -492,6 +543,28 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
 
   &__add {
     margin: govuk-spacing(3) 0 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inline result form — used on /inline-results to capture fine details
+// directly under the FO result row instead of a chunked journey. Same
+// nesting as the summary that replaces it on save.
+// ---------------------------------------------------------------------------
+.cps-result-form {
+  margin: govuk-spacing(3) 0 govuk-spacing(2);
+  padding: govuk-spacing(3);
+  background: $cps-grey-bg;
+  border-left: 4px solid $cps-blue;
+
+  // Keep the inner govuk-form-groups slightly tighter so the inline form
+  // doesn't sprawl down the page.
+  .govuk-form-group {
+    margin-bottom: govuk-spacing(3);
+  }
+
+  &__edit {
+    margin: govuk-spacing(2) 0 0;
   }
 }
 
@@ -958,6 +1031,149 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
     font-size: 14px;
     color: govuk-colour("black", $variant: "tint-25");
     margin: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Offence particulars (inset text) — shown when an offence row is expanded.
+// Holds the "Particulars:" paragraph plus a small Count / Date / Plea /
+// Verdict table summarising the charge.
+// ---------------------------------------------------------------------------
+.cps-offence__particulars-inset {
+  margin-top: 0;
+  margin-bottom: govuk-spacing(4);
+}
+
+.cps-offence__particulars {
+  margin-top: 0;
+  margin-bottom: govuk-spacing(3);
+}
+
+.cps-offence__entries-table {
+  margin-bottom: 0;
+
+  // Tighter cells than the default GOV.UK table — this is a small inline
+  // summary, not a primary data table.
+  .govuk-table__header,
+  .govuk-table__cell {
+    padding: govuk-spacing(2) govuk-spacing(3) govuk-spacing(2) 0;
+    font-size: 16px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bail-result warning (chunked / enter-results page)
+// Embedded govuk-warning-text shown beneath a bail result row when the
+// current defendant is "Remanded in custody". Confirming removes the
+// warning and leaves the row in place; cancel removes the entire row.
+// ---------------------------------------------------------------------------
+.cps-bail-warning {
+  margin-top: govuk-spacing(3);
+  padding: govuk-spacing(3);
+  background: govuk-colour("light-grey");
+  border-left: 5px solid govuk-colour("red");
+
+  // Tighten the inline warning text — full margin in this context looks loose.
+  .govuk-warning-text {
+    margin-bottom: govuk-spacing(2);
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(4);
+    margin-top: govuk-spacing(2);
+  }
+
+  &__confirm.govuk-button {
+    margin-bottom: 0;
+  }
+
+  &__cancel {
+    font-size: 16px;
+  }
+}
+
+// While a result row is awaiting bail confirmation, dim its body a touch
+// so it's clear the action hasn't taken effect yet.
+.cps-result-list__item--awaiting-confirm {
+  .cps-result-list__row {
+    opacity: 0.85;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bail confirmation modal (inline / inline-results page)
+// Full-page overlay + centred dialog. Hidden by default via the `hidden`
+// attribute on .cps-modal; setupBailModal() in inline-results.html flips it.
+// ---------------------------------------------------------------------------
+.cps-modal-open {
+  // Stop the page underneath from scrolling while the modal is open.
+  overflow: hidden;
+}
+
+.cps-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: govuk-spacing(4);
+
+  &[hidden] {
+    display: none;
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 12, 12, 0.7);
+  }
+
+  &__dialog {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    width: 100%;
+    background: govuk-colour("white");
+    padding: govuk-spacing(5);
+    box-shadow: 0 4px 16px rgba(11, 12, 12, 0.25);
+  }
+
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: govuk-colour("red");
+    color: govuk-colour("white");
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: govuk-spacing(3);
+  }
+
+  &__title {
+    margin-bottom: govuk-spacing(2);
+  }
+
+  &__body {
+    margin-bottom: govuk-spacing(4);
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(4);
+    flex-wrap: wrap;
+  }
+
+  &__confirm.govuk-button {
+    margin-bottom: 0;
+  }
+
+  &__cancel {
+    font-size: 19px;
   }
 }
 

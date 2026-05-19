@@ -49,6 +49,23 @@
         ]
       }) }}
 
+      {% set paymentTermsTypeLabels = {
+        'instalments-only':          'Instalments only',
+        'pay-by-date':               'Pay by date',
+        'on-release':                'On release',
+        'lump-sum-plus-instalments': 'Lump sum plus instalments'
+      } %}
+      {% set reserveTermsTypeLabels = {
+        'instalments-only':          'Instalments only',
+        'lump-sum-plus-instalments': 'Lump sum plus instalments',
+        'lump-sum':                  'Lump sum'
+      } %}
+      {% set benefitReasonLabels = {
+        'compensation-ordered':      'Compensation ordered',
+        'defendant-known-defaulter': 'Defendant is a known defaulter',
+        'defendant-requested':       'Defendant requested this'
+      } %}
+
       {% if data.collectionOrderMade == "yes" %}
         {{ govukSummaryList({
           rows: [
@@ -59,6 +76,55 @@
             }
           ]
         }) }}
+
+        {# Branch-specific rows. Only show what was actually captured for
+           the chosen collection-order type. #}
+        {% if data.collectionOrderType == "make-payments-as-ordered" %}
+          {{ govukSummaryList({
+            rows: [
+              {
+                key: { text: "Payment terms" },
+                value: { text: paymentTermsTypeLabels[data.paymentTermsType] or "—" },
+                actions: { items: [{ href: "/fine-flow/payment-terms-type", text: "Change", visuallyHiddenText: "payment terms" }] }
+              }
+            ]
+          }) }}
+        {% elif data.collectionOrderType == "attachment-of-earnings" %}
+          {{ govukSummaryList({
+            rows: [
+              {
+                key:   { text: "Employer" },
+                value: { text: data.employerName or "—" },
+                actions: { items: [{ href: "/fine-flow/employer-details", text: "Change", visuallyHiddenText: "employer details" }] }
+              },
+              {
+                key:   { text: "Employer postcode" },
+                value: { text: data.employerPostcode or "—" },
+                actions: { items: [{ href: "/fine-flow/employer-details", text: "Change", visuallyHiddenText: "employer postcode" }] }
+              }
+            ]
+          }) }}
+        {% elif data.collectionOrderType == "deductions-from-benefit" %}
+          {{ govukSummaryList({
+            rows: [
+              {
+                key:   { text: "Reason for application" },
+                value: { text: benefitReasonLabels[data.benefitReason] or "—" },
+                actions: { items: [{ href: "/fine-flow/dwp-application", text: "Change", visuallyHiddenText: "reason for application" }] }
+              },
+              {
+                key:   { text: "DWP AP number" },
+                value: { text: data.dwpApNumber or "—" },
+                actions: { items: [{ href: "/fine-flow/dwp-application", text: "Change", visuallyHiddenText: "DWP AP number" }] }
+              },
+              {
+                key:   { text: "Reserve terms" },
+                value: { text: reserveTermsTypeLabels[data.reserveTermsType] or "—" },
+                actions: { items: [{ href: "/fine-flow/reserve-terms-type", text: "Change", visuallyHiddenText: "reserve terms" }] }
+              }
+            ]
+          }) }}
+        {% endif %}
       {% elif data.collectionOrderMade == "no" %}
         {{ govukSummaryList({
           rows: [

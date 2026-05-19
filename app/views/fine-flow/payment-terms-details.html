@@ -23,120 +23,31 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
 
-      {% set frequencyItems = [
-        { value: "",            text: "Choose a frequency", selected: not data.paymentFrequency },
-        { value: "weekly",      text: "Weekly",        selected: data.paymentFrequency == "weekly" },
-        { value: "fortnightly", text: "Fortnightly",   selected: data.paymentFrequency == "fortnightly" },
-        { value: "monthly",     text: "Monthly",       selected: data.paymentFrequency == "monthly" }
-      ] %}
-
-      {# Heading + form vary based on the type chosen on the previous step. #}
-      {% if data.paymentTermsType == "instalments-only" %}
-        <h1 class="govuk-heading-l">Instalment terms</h1>
-
-        <form action="/fine-flow/payment-terms-details" method="post" novalidate>
-          {{ govukInput({
-            label: { text: "Instalment amount" },
-            id: "instalment-amount", name: "instalmentAmount",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.instalmentAmount, inputmode: "decimal"
-          }) }}
-
-          {{ govukSelect({
-            id: "payment-frequency", name: "paymentFrequency",
-            label: { text: "Payment frequency" },
-            items: frequencyItems
-          }) }}
-
-          {{ govukDateInput({
-            id: "instalment-start-date", namePrefix: "instalmentStartDate",
-            fieldset: { legend: { text: "Instalment start date", classes: "govuk-fieldset__legend--s" } },
-            hint: { text: "For example, 27 4 2026" },
-            items: [
-              { name: "day",   classes: "govuk-input--width-2", value: data['instalmentStartDate-day'] },
-              { name: "month", classes: "govuk-input--width-2", value: data['instalmentStartDate-month'] },
-              { name: "year",  classes: "govuk-input--width-4", value: data['instalmentStartDate-year'] }
-            ]
-          }) }}
-
-      {% elif data.paymentTermsType == "pay-by-date" %}
-        <h1 class="govuk-heading-l">Date to pay in full by</h1>
-
-        <form action="/fine-flow/payment-terms-details" method="post" novalidate>
-          {{ govukDateInput({
-            id: "pay-by-date", namePrefix: "payByDate",
-            fieldset: { legend: { text: "Date the full amount is due", classes: "govuk-fieldset__legend--s" } },
-            hint: { text: "For example, 27 4 2026" },
-            items: [
-              { name: "day",   classes: "govuk-input--width-2", value: data['payByDate-day'] },
-              { name: "month", classes: "govuk-input--width-2", value: data['payByDate-month'] },
-              { name: "year",  classes: "govuk-input--width-4", value: data['payByDate-year'] }
-            ]
-          }) }}
-
-      {% elif data.paymentTermsType == "on-release" %}
-        <h1 class="govuk-heading-l">Date to pay after release</h1>
-
-        <form action="/fine-flow/payment-terms-details" method="post" novalidate>
-          {{ govukDateInput({
-            id: "on-release-date", namePrefix: "onReleaseDate",
-            fieldset: { legend: { text: "Date the full amount is due after release", classes: "govuk-fieldset__legend--s" } },
-            hint: { text: "For example, 27 4 2026" },
-            items: [
-              { name: "day",   classes: "govuk-input--width-2", value: data['onReleaseDate-day'] },
-              { name: "month", classes: "govuk-input--width-2", value: data['onReleaseDate-month'] },
-              { name: "year",  classes: "govuk-input--width-4", value: data['onReleaseDate-year'] }
-            ]
-          }) }}
-
-      {% elif data.paymentTermsType == "lump-sum-plus-instalments" %}
-        <h1 class="govuk-heading-l">Lump sum plus instalments</h1>
-
-        <form action="/fine-flow/payment-terms-details" method="post" novalidate>
-          {{ govukInput({
-            label: { text: "Lump sum amount" },
-            id: "lump-sum-amount", name: "lumpSumAmount",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.lumpSumAmount, inputmode: "decimal"
-          }) }}
-
-          {{ govukInput({
-            label: { text: "Instalment amount (after the lump sum)" },
-            id: "lump-instalment-amount", name: "lumpInstalmentAmount",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.lumpInstalmentAmount, inputmode: "decimal"
-          }) }}
-
-          {{ govukSelect({
-            id: "lump-payment-frequency", name: "lumpPaymentFrequency",
-            label: { text: "Payment frequency" },
-            items: [
-              { value: "",            text: "Choose a frequency", selected: not data.lumpPaymentFrequency },
-              { value: "weekly",      text: "Weekly",        selected: data.lumpPaymentFrequency == "weekly" },
-              { value: "fortnightly", text: "Fortnightly",   selected: data.lumpPaymentFrequency == "fortnightly" },
-              { value: "monthly",     text: "Monthly",       selected: data.lumpPaymentFrequency == "monthly" }
-            ]
-          }) }}
-
-          {{ govukDateInput({
-            id: "lump-instalment-start-date", namePrefix: "lumpInstalmentStartDate",
-            fieldset: { legend: { text: "Instalment start date", classes: "govuk-fieldset__legend--s" } },
-            hint: { text: "For example, 27 4 2026" },
-            items: [
-              { name: "day",   classes: "govuk-input--width-2", value: data['lumpInstalmentStartDate-day'] },
-              { name: "month", classes: "govuk-input--width-2", value: data['lumpInstalmentStartDate-month'] },
-              { name: "year",  classes: "govuk-input--width-4", value: data['lumpInstalmentStartDate-year'] }
-            ]
-          }) }}
-
-      {% else %}
-        <h1 class="govuk-heading-l">Payment terms</h1>
-        <p class="govuk-body">
-          <a class="govuk-link" href="/fine-flow/payment-terms-type">Choose a payment terms type first</a>.
-        </p>
-        <form action="/fine-flow/payment-terms-details" method="post" novalidate>
+      {# Dynamic error summary — always rendered before the form. #}
+      {% if errors %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: errors
+        }) }}
       {% endif %}
 
+      {% set frequencyItems = [
+        { value: "",            text: "Choose a frequency", selected: not data.paymentFrequency },
+        { value: "weekly",      text: "Weekly",             selected: data.paymentFrequency == "weekly" },
+        { value: "fortnightly", text: "Fortnightly",        selected: data.paymentFrequency == "fortnightly" },
+        { value: "monthly",     text: "Monthly",            selected: data.paymentFrequency == "monthly" }
+      ] %}
+
+      {# Only render the form when a payment-terms type has been chosen. The
+         "Choose a payment terms type first" fallback below sits outside any
+         form so the IDE / HTML linter can match <form> open and close on a
+         single linear branch. #}
+      {% if data.paymentTermsType %}
+
+        {# Optional-details captured outside the form so the {% set %} block
+           doesn't sit between <form> and </form> (which trips some HTML
+           linters). The captured HTML is passed to govukDetails inside the
+           form below. #}
         {% set optionalHtml %}
           {{ govukRadios({
             name: "parentToPay",
@@ -148,13 +59,15 @@
               { value: "no",  text: "No",  checked: data.parentToPay == "no" }
             ]
           }) }}
+
           {{ govukInput({
             label: { text: "Number of days in default", classes: "govuk-label--s" },
-            hint: { text: "Days before enforcement action begins if the defendant misses a payment." },
+            hint:  { text: "Days before enforcement action begins if the defendant misses a payment." },
             id: "days-in-default", name: "daysInDefault",
             classes: "govuk-input--width-5",
             value: data.daysInDefault, inputmode: "numeric"
           }) }}
+
           {{ govukRadios({
             name: "paymentCardRequired",
             idPrefix: "payment-card-required",
@@ -167,13 +80,113 @@
           }) }}
         {% endset %}
 
-        {{ govukDetails({
-          summaryText: "Optional details",
-          html: optionalHtml
-        }) }}
+        <form action="/fine-flow/payment-terms-details" method="post" novalidate>
 
-        {{ govukButton({ text: "Continue" }) }}
-      </form>
+          {% if data.paymentTermsType == "instalments-only" %}
+            <h1 class="govuk-heading-l">Instalment terms</h1>
+
+            {{ govukInput({
+              label: { text: "Instalment amount" },
+              id: "instalment-amount", name: "instalmentAmount",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.instalmentAmount, inputmode: "decimal"
+            }) }}
+
+            {{ govukSelect({
+              id: "payment-frequency", name: "paymentFrequency",
+              label: { text: "Payment frequency" },
+              items: frequencyItems
+            }) }}
+
+            {{ govukDateInput({
+              id: "instalment-start-date", namePrefix: "instalmentStartDate",
+              fieldset: { legend: { text: "Instalment start date", classes: "govuk-fieldset__legend--s" } },
+              hint: { text: "For example, 27 4 2026" },
+              items: [
+                { name: "day",   classes: "govuk-input--width-2", value: data['instalmentStartDate-day'] },
+                { name: "month", classes: "govuk-input--width-2", value: data['instalmentStartDate-month'] },
+                { name: "year",  classes: "govuk-input--width-4", value: data['instalmentStartDate-year'] }
+              ]
+            }) }}
+
+          {% elif data.paymentTermsType == "pay-by-date" %}
+            <h1 class="govuk-heading-l">Date to pay in full by</h1>
+
+            {{ govukDateInput({
+              id: "pay-by-date", namePrefix: "payByDate",
+              fieldset: { legend: { text: "Date the full amount is due", classes: "govuk-fieldset__legend--s" } },
+              hint: { text: "For example, 27 4 2026" },
+              items: [
+                { name: "day",   classes: "govuk-input--width-2", value: data['payByDate-day'] },
+                { name: "month", classes: "govuk-input--width-2", value: data['payByDate-month'] },
+                { name: "year",  classes: "govuk-input--width-4", value: data['payByDate-year'] }
+              ]
+            }) }}
+
+          {% elif data.paymentTermsType == "on-release" %}
+            <h1 class="govuk-heading-l">Date to pay after release</h1>
+
+            {{ govukDateInput({
+              id: "on-release-date", namePrefix: "onReleaseDate",
+              fieldset: { legend: { text: "Date the full amount is due after release", classes: "govuk-fieldset__legend--s" } },
+              hint: { text: "For example, 27 4 2026" },
+              items: [
+                { name: "day",   classes: "govuk-input--width-2", value: data['onReleaseDate-day'] },
+                { name: "month", classes: "govuk-input--width-2", value: data['onReleaseDate-month'] },
+                { name: "year",  classes: "govuk-input--width-4", value: data['onReleaseDate-year'] }
+              ]
+            }) }}
+
+          {% elif data.paymentTermsType == "lump-sum-plus-instalments" %}
+            <h1 class="govuk-heading-l">Lump sum plus instalments</h1>
+
+            {{ govukInput({
+              label: { text: "Lump sum amount" },
+              id: "lump-sum-amount", name: "lumpSumAmount",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.lumpSumAmount, inputmode: "decimal"
+            }) }}
+
+            {{ govukInput({
+              label: { text: "Instalment amount (after the lump sum)" },
+              id: "lump-instalment-amount", name: "lumpInstalmentAmount",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.lumpInstalmentAmount, inputmode: "decimal"
+            }) }}
+
+            {{ govukSelect({
+              id: "payment-frequency", name: "paymentFrequency",
+              label: { text: "Payment frequency" },
+              items: frequencyItems
+            }) }}
+
+            {{ govukDateInput({
+              id: "lump-instalment-start-date", namePrefix: "lumpInstalmentStartDate",
+              fieldset: { legend: { text: "Instalment start date", classes: "govuk-fieldset__legend--s" } },
+              hint: { text: "For example, 27 4 2026" },
+              items: [
+                { name: "day",   classes: "govuk-input--width-2", value: data['lumpInstalmentStartDate-day'] },
+                { name: "month", classes: "govuk-input--width-2", value: data['lumpInstalmentStartDate-month'] },
+                { name: "year",  classes: "govuk-input--width-4", value: data['lumpInstalmentStartDate-year'] }
+              ]
+            }) }}
+          {% endif %}
+
+          {{ govukDetails({
+            summaryText: "Optional details",
+            html: optionalHtml
+          }) }}
+
+          {{ govukButton({ text: "Continue" }) }}
+        </form>
+
+      {% else %}
+        <h1 class="govuk-heading-l">Payment terms</h1>
+        <p class="govuk-body">
+          <a class="govuk-link" href="/fine-flow/payment-terms-type">Choose a payment terms type first</a>.
+        </p>
+      {% endif %}
+
     </div>
   </div>
 {% endblock %}

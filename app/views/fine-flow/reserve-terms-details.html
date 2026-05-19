@@ -17,68 +17,81 @@
 
       {% set reserveFrequencyItems = [
         { value: "",            text: "Choose a frequency", selected: not data.reservePaymentFrequency },
-        { value: "weekly",      text: "Weekly",        selected: data.reservePaymentFrequency == "weekly" },
-        { value: "fortnightly", text: "Fortnightly",   selected: data.reservePaymentFrequency == "fortnightly" },
-        { value: "monthly",     text: "Monthly",       selected: data.reservePaymentFrequency == "monthly" }
+        { value: "weekly",      text: "Weekly",             selected: data.reservePaymentFrequency == "weekly" },
+        { value: "fortnightly", text: "Fortnightly",        selected: data.reservePaymentFrequency == "fortnightly" },
+        { value: "monthly",     text: "Monthly",            selected: data.reservePaymentFrequency == "monthly" }
       ] %}
 
-      {% if data.reserveTermsType == "instalments-only" %}
-        <h1 class="govuk-heading-l">Reserve instalment terms</h1>
-        <p class="govuk-body">Used if the DWP cannot make the deduction.</p>
-
+      {# Only render the form when a reserve-terms type has been chosen. The
+         "Choose reserve terms first" fallback below sits outside any form so
+         the IDE / HTML linter can match <form> open and close on a single
+         linear branch. #}
+      {% if data.reserveTermsType %}
         <form action="/fine-flow/reserve-terms-details" method="post" novalidate>
-          {{ govukInput({
-            label: { text: "Instalment amount" },
-            id: "reserve-instalment-amount", name: "reserveInstalmentAmount",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.reserveInstalmentAmount, inputmode: "decimal"
-          }) }}
-          {{ govukSelect({
-            id: "reserve-payment-frequency", name: "reservePaymentFrequency",
-            label: { text: "Payment frequency" },
-            items: reserveFrequencyItems
-          }) }}
 
-      {% elif data.reserveTermsType == "lump-sum-plus-instalments" %}
-        <h1 class="govuk-heading-l">Reserve lump sum plus instalments</h1>
-        <p class="govuk-body">Used if the DWP cannot make the deduction.</p>
+          {% if data.reserveTermsType == "instalments-only" %}
+            <h1 class="govuk-heading-l">Reserve instalment terms</h1>
+            <p class="govuk-body">Used if the DWP cannot make the deduction.</p>
 
-        <form action="/fine-flow/reserve-terms-details" method="post" novalidate>
-          {{ govukInput({
-            label: { text: "Lump sum amount" },
-            id: "reserve-lump-sum", name: "reserveLumpSum",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.reserveLumpSum, inputmode: "decimal"
-          }) }}
-          {{ govukInput({
-            label: { text: "Instalment amount" },
-            id: "reserve-lump-instalment", name: "reserveLumpInstalment",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.reserveLumpInstalment, inputmode: "decimal"
-          }) }}
+            {{ govukInput({
+              label: { text: "Instalment amount" },
+              id: "reserve-instalment-amount", name: "reserveInstalmentAmount",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.reserveInstalmentAmount, inputmode: "decimal"
+            }) }}
 
-      {% elif data.reserveTermsType == "lump-sum" %}
-        <h1 class="govuk-heading-l">Reserve lump sum</h1>
-        <p class="govuk-body">Used if the DWP cannot make the deduction.</p>
+            {{ govukSelect({
+              id: "reserve-payment-frequency", name: "reservePaymentFrequency",
+              label: { text: "Payment frequency" },
+              items: reserveFrequencyItems
+            }) }}
 
-        <form action="/fine-flow/reserve-terms-details" method="post" novalidate>
-          {{ govukInput({
-            label: { text: "Lump sum amount" },
-            id: "reserve-lump-only", name: "reserveLumpOnly",
-            classes: "govuk-input--width-5", prefix: { text: "£" },
-            value: data.reserveLumpOnly, inputmode: "decimal"
-          }) }}
+          {% elif data.reserveTermsType == "lump-sum-plus-instalments" %}
+            <h1 class="govuk-heading-l">Reserve lump sum plus instalments</h1>
+            <p class="govuk-body">Used if the DWP cannot make the deduction.</p>
 
+            {{ govukInput({
+              label: { text: "Lump sum amount" },
+              id: "reserve-lump-sum", name: "reserveLumpSum",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.reserveLumpSum, inputmode: "decimal"
+            }) }}
+
+            {{ govukInput({
+              label: { text: "Instalment amount" },
+              id: "reserve-lump-instalment", name: "reserveLumpInstalment",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.reserveLumpInstalment, inputmode: "decimal"
+            }) }}
+
+            {# Lump sum + instalments needs a frequency too. #}
+            {{ govukSelect({
+              id: "reserve-payment-frequency", name: "reservePaymentFrequency",
+              label: { text: "Payment frequency" },
+              items: reserveFrequencyItems
+            }) }}
+
+          {% elif data.reserveTermsType == "lump-sum" %}
+            <h1 class="govuk-heading-l">Reserve lump sum</h1>
+            <p class="govuk-body">Used if the DWP cannot make the deduction.</p>
+
+            {{ govukInput({
+              label: { text: "Lump sum amount" },
+              id: "reserve-lump-only", name: "reserveLumpOnly",
+              classes: "govuk-input--width-5", prefix: { text: "£" },
+              value: data.reserveLumpOnly, inputmode: "decimal"
+            }) }}
+          {% endif %}
+
+          {{ govukButton({ text: "Continue" }) }}
+        </form>
       {% else %}
         <h1 class="govuk-heading-l">Reserve terms</h1>
         <p class="govuk-body">
           <a class="govuk-link" href="/fine-flow/reserve-terms-type">Choose reserve terms first</a>.
         </p>
-        <form action="/fine-flow/reserve-terms-details" method="post" novalidate>
       {% endif %}
 
-        {{ govukButton({ text: "Continue" }) }}
-      </form>
     </div>
   </div>
 {% endblock %}

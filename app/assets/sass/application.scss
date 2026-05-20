@@ -218,7 +218,22 @@ $cps-black: #0b0c0c;       // matches govuk-colour("black")
 // ---------------------------------------------------------------------------
 // Three-column results row
 // ---------------------------------------------------------------------------
-.cps-results-row { margin-bottom: govuk-spacing(6); }
+// Switch the three-column row to flex so the columns become equal-height.
+// That gives the sticky sidebar room to scroll within its column — without
+// this, the right column wraps the aside and shares its height, so there's
+// no space for `position: sticky` to engage. The percentage widths on
+// .govuk-grid-column-* still drive the column widths under flex.
+.cps-results-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: govuk-spacing(6);
+
+  // The floated .govuk-grid-column-* children pick up float from govuk-
+  // frontend; suppress it so flex layout is clean and column heights line up.
+  > [class*="govuk-grid-column-"] {
+    float: none;
+  }
+}
 
 .cps-panel {
   border: 1px solid $cps-grey-border;
@@ -799,6 +814,22 @@ $cps-blue-tint: #e6f1fb; // light tint matching the GOV.UK rebrand blue family
   border: 1px solid $cps-grey-border;
   padding: govuk-spacing(3);
   background: govuk-colour("white");
+
+  // Stick to the top of the viewport when the user scrolls past the sidebar's
+  // natural position — leaving a 30px breathing space above. Sticky returns
+  // the sidebar to its original placement when the user scrolls back up, and
+  // naturally stops at the bottom of its parent column.
+  // align-self: flex-start lets the aside size to its own content inside the
+  // GOV.UK grid row (which is a flex container in the rebrand), otherwise the
+  // aside stretches to the row height and sticky has nothing to sit against.
+  position: sticky;
+  top: 30px;
+  align-self: flex-start;
+
+  // If the sidebar is ever taller than the viewport, let it scroll internally
+  // instead of overflowing the screen.
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
 
   &__shortcut {
     display: flex;

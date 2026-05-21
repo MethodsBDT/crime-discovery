@@ -239,7 +239,6 @@ $cps-black: #0b0c0c;       // matches govuk-colour("black")
   border: 1px solid $cps-grey-border;
   padding: govuk-spacing(3);
   background: govuk-colour("white");
-  height: 100%;
 
   &__heading { margin: 0 0 govuk-spacing(3); }
 }
